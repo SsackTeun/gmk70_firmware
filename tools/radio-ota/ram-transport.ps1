@@ -9,6 +9,8 @@ $script:trialCommand = $null
 $script:trialData = $null
 $script:trialTaskBridge = $null
 $script:trialWriteRanges = @()
+$script:trialReadOnly = $false
+$script:trialReadGuard = $null
 $script:trialSent = [Collections.Generic.List[object]]::new()
 
 function Wait-Gmk70TrialOperation {
@@ -27,9 +29,13 @@ function Assert-Gmk70TrialGatt([object] $Result, [string] $Label) {
 }
 
 function Open-Gmk70TrialRadio {
-    param([string] $BluetoothAddress = '00:00:00:00:00:00')
+    param([string] $BluetoothAddress = '00:00:00:00:00:00', [switch] $ReadOnly,
+        [scriptblock] $ReadGuard = $null)
     if ($PSVersionTable.PSEdition -ne 'Desktop') { throw 'Use Windows PowerShell 5.1.' }
-    if ($BluetoothAddress -ne '00:00:00:00:00:00') { throw 'This trial is scoped to the verified GMK70-2 radio.' }
+    if (-not $ReadOnly -and $BluetoothAddress -ne '00:00:00:00:00:00') { throw 'This trial is scoped to the verified GMK70-2 radio.' }
+    $script:trialReadOnly = [bool] $ReadOnly
+    $script:trialReadGuard = $ReadGuard
+    $script:trialWriteRanges = @()
     Add-Type -AssemblyName System.Runtime.WindowsRuntime
     [Windows.Devices.Bluetooth.BluetoothLEDevice, Windows.Devices.Bluetooth, ContentType = WindowsRuntime] | Out-Null
     [Windows.Devices.Bluetooth.BluetoothCacheMode, Windows.Devices.Bluetooth, ContentType = WindowsRuntime] | Out-Null
@@ -51,12 +57,31 @@ function Open-Gmk70TrialRadio {
     })
     if ($methods.Length -ne 1) { throw 'Cannot find the WinRT task bridge.' }
     $script:trialTaskBridge = $methods[0]
-    $address = [Convert]::ToUInt64($BluetoothAddress.Replace(':', ''), 16)
-    $script:trialDevice = Wait-Gmk70TrialOperation {
-        [Windows.Devices.Bluetooth.BluetoothLEDevice]::FromBluetoothAddressAsync($address)
-    } ([Windows.Devices.Bluetooth.BluetoothLEDevice]) 'open radio'
-    if ($null -eq $script:trialDevice -or $script:trialDevice.Name -ne 'GMK70-2') { throw 'Expected GMK70-2.' }
-    Write-Host ('GMK70-2 Bluetooth connection: {0}' -f $script:trialDevice.ConnectionStatus)
+    if ($ReadOnly -and $BluetoothAddress -eq '') {
+        [Windows.Devices.Enumeration.DeviceInformation, Windows.Devices.Enumeration, ContentType = WindowsRuntime] | Out-Null
+        [Windows.Devices.Enumeration.DeviceInformationCollection, Windows.Devices.Enumeration, ContentType = WindowsRuntime] | Out-Null
+        [Windows.Devices.Bluetooth.BluetoothConnectionStatus, Windows.Devices.Bluetooth, ContentType = WindowsRuntime] | Out-Null
+        $selector = [Windows.Devices.Bluetooth.BluetoothLEDevice]::GetDeviceSelectorFromConnectionStatus(
+            [Windows.Devices.Bluetooth.BluetoothConnectionStatus]::Connected)
+        $devices = Wait-Gmk70TrialOperation {
+            [Windows.Devices.Enumeration.DeviceInformation]::FindAllAsync($selector)
+        } ([Windows.Devices.Enumeration.DeviceInformationCollection]) 'find connected keyboard'
+        $candidates = @(ConvertTo-Gmk70WinRtArray -Value $devices `
+            -ItemType ([Windows.Devices.Enumeration.DeviceInformation]) | Where-Object { $_.Name -match '^GMK70-[1-5]$' })
+        if ($candidates.Length -ne 1) { throw 'Expected one connected GMK70 Bluetooth keyboard; supply -BluetoothAddress if discovery is ambiguous.' }
+        $script:trialDevice = Wait-Gmk70TrialOperation {
+            [Windows.Devices.Bluetooth.BluetoothLEDevice]::FromIdAsync($candidates[0].Id)
+        } ([Windows.Devices.Bluetooth.BluetoothLEDevice]) 'open connected radio'
+    } else {
+        $address = [Convert]::ToUInt64($BluetoothAddress.Replace(':', ''), 16)
+        $script:trialDevice = Wait-Gmk70TrialOperation {
+            [Windows.Devices.Bluetooth.BluetoothLEDevice]::FromBluetoothAddressAsync($address)
+        } ([Windows.Devices.Bluetooth.BluetoothLEDevice]) 'open radio'
+    }
+    if ($null -eq $script:trialDevice -or
+        (-not $ReadOnly -and $script:trialDevice.Name -ne 'GMK70-2') -or
+        ($ReadOnly -and $script:trialDevice.Name -notmatch '^GMK70-[1-5]$')) { throw 'Expected the GMK70 keyboard.' }
+    Write-Host ('GMK70 Bluetooth connection: {0}' -f $script:trialDevice.ConnectionStatus)
     $uncached = [Windows.Devices.Bluetooth.BluetoothCacheMode]::Uncached
     $uuid = [Guid] '02f00000-0000-0000-0000-00000000fe00'
     $result = Wait-Gmk70TrialOperation { $script:trialDevice.GetGattServicesForUuidAsync($uuid, $uncached) } `
@@ -85,11 +110,17 @@ function Close-Gmk70TrialRadio {
     $script:trialWriteRanges = @()
     if ($null -ne $script:trialService) { try { $script:trialService.Dispose() } catch { } }
     if ($null -ne $script:trialDevice) { try { $script:trialDevice.Dispose() } catch { } }
+    $script:trialReadOnly = $false
+    $script:trialReadGuard = $null
 }
 
 function Send-Gmk70TrialPacket([byte[]] $Packet) {
     # This check runs at the last boundary before any GATT write.
+    if ($script:trialReadOnly -and ($null -eq $Packet -or $Packet.Length -lt 1 -or $Packet[0] -notin @(6, 8))) {
+        throw 'Read-only radio access permits only storage/memory read requests.'
+    }
     Assert-Gmk70TrialPacket -Packet $Packet -WriteRanges $script:trialWriteRanges
+    if ($script:trialReadOnly -and $null -ne $script:trialReadGuard) { & $script:trialReadGuard $Packet }
     $writer = [Windows.Storage.Streams.DataWriter]::new()
     try {
         $writer.WriteBytes($Packet)

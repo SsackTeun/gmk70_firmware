@@ -1,5 +1,9 @@
 # GMK70 Bluetooth radio dump
 
+For a frozen battery percentage, use the much smaller, read-only
+[battery-state capture](BATTERY.md). It needs no firmware flash or mode switch
+and does not produce a flash/RAM dump.
+
 The separate physical [RAM trial tool](RAM-TRIAL.md) performs a narrowly scoped
 volatile canary experiment using `ram-trial.ps1`. The collectors described below
 perform storage/ROM reads.

@@ -173,6 +173,47 @@ value until reinitialization or a qualifying update. These radio behaviors are
 separate from whether its ADC is currently running. Fresh UART replies alone
 cannot establish fresh voltage measurements.
 
+### Remaining freeze: distinguish sampling from filtering
+
+The reported freeze was confirmed on main commit `78b4c89`, which already has
+the polling and QMK-sequencing changes above. Those changes do not establish
+fresh voltage sampling in an external radio that was already in a retained
+state. The resident updater updates the WB32 main MCUs, not the radio processor.
+An MCU firmware update must not be treated as a reset of radio battery state.
+
+An expanded bounded replay executes the captured UART consumer, ADC completion
+callback, mapper, selector and power handler. Synthetic ADC voltages and RAM are
+used; timer, UART/BLE and peripheral APIs are stubbed, and asynchronous wake is
+supplied explicitly. It establishes these separate mechanisms:
+
+- `A6 53` loads the existing byte at `0x11003D07`; it never initiates an ADC
+  conversion. After stopping the sampler, the startup/maintenance command set
+  and 21 successful percentage queries continued to return 60%.
+- After an explicitly supplied radio wake, the real ADC-completion/mapper path
+  retained 60% for 360 synthetic lower readings. Reading 361 changed it to 10%
+  for a 3,600 mV input, or directly to 0% for 3,100 mV. The real BAS sender then
+  used that same changed percentage. At a ten-second sampling cadence the
+  360-call hold is approximately an hour, not a three-second poll interval.
+- The immediate dongle-selection handler itself does not clear that estimate
+  or its filter. Its observed hardware recovery therefore cannot be attributed
+  to a cache reset in that handler alone. Asynchronous connection/power and
+  physical-switch effects remain outside this replay.
+
+The existing UART tests inject changed percentage replies to test transport and
+display plumbing. They do not verify the radio's ADC or estimator, and passing
+them does not establish a fix for this hardware symptom. Neither Windows battery
+reporting nor the RGB bar supplies an independent voltage measurement.
+
+The [read-only radio battery collector](../tools/radio-ota/BATTERY.md) reads the
+actual filter counter, sampler/ADC timer descriptors, charging/override latches
+and output state over Bluetooth while the symptom is present. It uses existing
+radio read commands and needs no MCU/radio firmware change, USB connection,
+mode switch or reset. Bounded code fingerprints qualify the RAM layout; raw RAM,
+bond data and device identifiers are excluded from its JSON. Bluetooth reads
+can wake the radio and timer fields are not an atomic snapshot, so the first
+state and subsequent changes must be interpreted with those limits. Actual
+hardware evidence is still needed to identify which mechanism is active.
+
 Separately, exhausted radio controls previously latched a fault that stranded
 pending sleep commands, blocked battery queries and prevented MCU sleep. Failed
 work now retires after bounded attempts, with bounded zero-report releases and
