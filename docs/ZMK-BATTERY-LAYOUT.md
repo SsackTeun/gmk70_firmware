@@ -187,8 +187,13 @@ used; timer, UART/BLE and peripheral APIs are stubbed, and asynchronous wake is
 supplied explicitly. It establishes these separate mechanisms:
 
 - `A6 53` loads the existing byte at `0x11003D07`; it never initiates an ADC
-  conversion. After stopping the sampler, the startup/maintenance command set
-  and 21 successful percentage queries continued to return 60%.
+  conversion. The captured `A7` external-percentage handler can disable the
+  sampler while UART remains active. In that retained-state fixture, the
+  startup/maintenance command set and 21 percentage replies continued to return
+  60%. Its external-override latch also prevented sampler restart on a supplied
+  radio power wake. Current ZMK does not intentionally send `A7`; this fixture
+  does not establish that the user's module entered that state. The collector
+  reads the actual override latch to check it.
 - After an explicitly supplied radio wake, the real ADC-completion/mapper path
   retained 60% for 360 synthetic lower readings. Reading 361 changed it to 10%
   for a 3,600 mV input, or directly to 0% for 3,100 mV. The real BAS sender then
