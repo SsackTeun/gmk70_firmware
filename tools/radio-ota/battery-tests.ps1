@@ -121,7 +121,13 @@ try {
     Assert-Equal $report.requests.Length 16 'Bounded read count'
     Assert-Equal (Test-Path ($output + '.closed')) $true 'Transport closed'
     $original = [IO.File]::ReadAllText($output)
-    & $hostExe -NoLogo -NoProfile -File $fixture -OutputPath $output 2>&1 | Out-Null
+    # Desktop PowerShell promotes redirected native stderr to ErrorRecords.
+    # This invocation intentionally fails; verify its exit and preserved file.
+    try {
+        $ErrorActionPreference = 'Continue'
+        & $hostExe -NoLogo -NoProfile -File $fixture -OutputPath $output 2>&1 | Out-Null
+    }
+    finally { $ErrorActionPreference = 'Stop' }
     Assert-Equal ($LASTEXITCODE -ne 0) $true 'Existing output rejected'
     Assert-Equal ([IO.File]::ReadAllText($output)) $original 'Existing capture preserved'
     $output = Join-Path $temporary 'timeout.json'
@@ -132,6 +138,21 @@ try {
     Assert-Equal $report.samples.Length 1 'Completed snapshot preserved'
     Assert-Equal $report.requests.Length 9 'No retry after timeout'
     Assert-Equal $report.error_stage 'read snapshot 2' 'Failed operation recorded'
+    Assert-Equal -Actual $report.error_details.exceptions[0].message -Expected 'Synthetic timeout; never retry.' -Label 'Useful failure message'
+    Assert-Equal -Actual $report.error_details.exceptions[0].hresult -Expected '0x80131505' -Label 'Timeout HRESULT'
     Assert-Equal (Test-Path ($output + '.closed')) $true 'Timeout closes transport'
+    $output = Join-Path $temporary 'connect.json'
+    & $hostExe -NoLogo -NoProfile -File $fixture -OutputPath $output -FailConnect | Out-Null
+    Assert-Equal -Actual $LASTEXITCODE -Expected 1 -Label 'Connection failure exit'
+    $report = [IO.File]::ReadAllText($output) | ConvertFrom-Json
+    Assert-Equal -Actual $report.error_stage -Expected 'connect' -Label 'Connection acquisition stage'
+    Assert-Equal -Actual $report.error_connect_stage -Expected 'discovery-name-selection' -Label 'Precise connection substage'
+    Assert-Equal -Actual ($report.error_details.exceptions[0].message -match '^No connected GMK70') -Expected $true -Label 'Empty discovery explanation'
+    Assert-Equal -Actual ([string]::IsNullOrEmpty($report.error_details.id)) -Expected $false -Label 'Useful PowerShell error identifier'
+    Assert-Equal -Actual $report.error_details.source_file -Expected 'radio-core.ps1' -Label 'Source basename only'
+    Assert-Equal -Actual $report.requests.Length -Expected 0 -Label 'No requests on connection failure'
+    Assert-Equal -Actual $report.samples.Length -Expected 0 -Label 'No simulated diagnosis on connection failure'
+    Assert-Equal -Actual $report.bounded_code_verified -Expected $false -Label 'No code verification without connection'
+    Assert-Equal -Actual (Test-Path ($output + '.closed')) -Expected $true -Label 'Connection failure closes transport'
 } finally { Remove-Item -LiteralPath $temporary -Recurse -Force }
 Write-Host 'PASS: mocked acquisition writes complete/partial JSON, closes transport, preserves existing output and never retries a timeout.'

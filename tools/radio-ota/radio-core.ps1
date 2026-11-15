@@ -1,6 +1,77 @@
 # Portable protocol/file operations; this file never accesses a physical device.
 Set-StrictMode -Version Latest
 
+class Gmk70RadioExceptionDetail {
+    [string] $type
+    [string] $hresult
+    [string] $message
+}
+
+class Gmk70RadioFailureDetail {
+    [string] $id
+    [string] $category
+    [string] $source_file
+    [int] $source_line
+    [Gmk70RadioExceptionDetail[]] $exceptions
+}
+
+function Protect-Gmk70RadioErrorText {
+    [OutputType([string])]
+    param([AllowEmptyString()] [string] $Text)
+    # Exception messages can embed identifiers even when TargetObject and the
+    # full ErrorRecord are omitted. Never retain paths or Bluetooth addresses.
+    [string] $safe = [regex]::Replace($Text,
+        '(?i)(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}|\b(?:0x)?[0-9a-f]{12}\b|\b\d{10,20}\b', '[redacted identifier]')
+    $safe = [regex]::Replace($safe,
+        '(?i)(?:\\\\\?\\|BluetoothLE#|BTHLE\\|BTHENUM\\|HID\\|HID#|SWD\\)\S+', '[redacted device path]')
+    $safe = [regex]::Replace($safe,
+        '(?i)[A-Z]:[\\/][^\r\n"'']*|\\\\[^\r\n"'']*|/(?:home|Users|mnt)/[^\r\n"'']*', '[redacted path]')
+    $safe = [regex]::Replace($safe, '[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', ' ')
+    return $safe.Substring(0, [Math]::Min(1500, $safe.Length))
+}
+
+function Get-Gmk70RadioFailureDetail {
+    [OutputType([Gmk70RadioFailureDetail])]
+    param([Parameter(Mandatory = $true)] [Management.Automation.ErrorRecord] $Failure)
+    [Gmk70RadioFailureDetail] $detail = [Gmk70RadioFailureDetail]::new()
+    $detail.id = Protect-Gmk70RadioErrorText -Text $Failure.FullyQualifiedErrorId
+    $detail.category = $Failure.CategoryInfo.Category.ToString()
+    if ($null -ne $Failure.InvocationInfo) {
+        $detail.source_file = Protect-Gmk70RadioErrorText -Text ([IO.Path]::GetFileName($Failure.InvocationInfo.ScriptName))
+        $detail.source_line = $Failure.InvocationInfo.ScriptLineNumber
+    }
+    [Collections.Generic.List[Gmk70RadioExceptionDetail]] $exceptions = [Collections.Generic.List[Gmk70RadioExceptionDetail]]::new()
+    [Exception] $exception = $Failure.Exception
+    while ($null -ne $exception -and $exceptions.Count -lt 8) {
+        [Gmk70RadioExceptionDetail] $item = [Gmk70RadioExceptionDetail]::new()
+        $item.type = $exception.GetType().FullName
+        $item.hresult = '0x' + $exception.HResult.ToString('X8')
+        $item.message = Protect-Gmk70RadioErrorText -Text $exception.Message
+        $exceptions.Add($item)
+        $exception = $exception.InnerException
+    }
+    $detail.exceptions = $exceptions.ToArray()
+    return $detail
+}
+
+function Find-Gmk70RadioNameIndex {
+    [OutputType([int])]
+    param([AllowEmptyCollection()] [string[]] $Names)
+    [int] $candidate = -1
+    for ([int] $index = 0; $index -lt $Names.Length; $index++) {
+        if ($Names[$index] -match '\AGMK70-[1-5]\z') {
+            if ($candidate -ge 0) {
+                throw [InvalidOperationException]::new('Multiple connected GMK70 profiles; supply -BluetoothAddress locally to disambiguate. Do not share the address.')
+            }
+            $candidate = $index
+        }
+    }
+    if ($candidate -lt 0) {
+        throw [InvalidOperationException]::new(('No connected GMK70 profile found among {0} discovered devices. Run on the Windows PC currently connected to the keyboard; leave its profile and power unchanged.' -f $Names.Length))
+    }
+    return $candidate
+}
+
 function ConvertTo-Gmk70WinRtArray {
     param([object] $Value, [type] $ItemType)
     # PowerShell's COM adapter does not expose WinRT vector-view members.

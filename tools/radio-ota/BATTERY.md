@@ -10,6 +10,11 @@ firmware, including QMK/VIA, Vial and ZMK.
 2. From this repository on Windows, run `tools\radio-ota\run-battery.cmd`.
    It uses built-in **Windows PowerShell 5.1**; no MSVC, administrator access or
    Python installation is required. It discovers the connected GMK70 profile.
+   Run it on the Windows computer receiving the keyboard's Bluetooth input.
+   A different Windows host cannot inspect the frozen state on another computer.
+   If that computer is not Windows, this collector cannot acquire the unchanged
+   connection; wait for a Windows-connected occurrence rather than switching
+   profiles or reconnecting to obtain a supposedly equivalent snapshot.
 3. Keep using the keyboard normally for about 30 seconds. Send the resulting
    `gmk70-battery-radio-*.json` beside the launcher. Do not power-cycle or switch
    to dongle first.
@@ -40,6 +45,14 @@ live application. A mismatch or timeout ends acquisition without retry. The JSON
 contains decoded fields and request addresses/lengths, not raw RAM, Bluetooth
 addresses, bonding keys or HID paths. Other bytes fetched alongside the selected
 profile are discarded.
+
+Failures retain the acquisition stage, exact connection substage (when opening),
+PowerShell error identifier/category, source basename/line and a bounded exception
+chain with types, HRESULTs and sanitized messages. Paths and Bluetooth identifiers
+are redacted; full exception records and target objects are never serialized.
+An empty discovery result reports no connected GMK70, rather than failing while
+filtering the WinRT collection. Neither a clean discovery failure nor passing
+offline tests establishes a working device connection or a battery diagnosis.
 
 Interpretation requires the snapshots, not just one unchanged percentage:
 

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Offline acquisition-flow fixture. Every device boundary is replaced before execution.
 #requires -Version 5.1
-param([Parameter(Mandatory = $true)] [string] $OutputPath, [switch] $FailSecondSnapshot)
+param([Parameter(Mandatory = $true)] [string] $OutputPath, [switch] $FailSecondSnapshot, [switch] $FailConnect)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'radio-core.ps1')
@@ -19,9 +19,13 @@ $script:opened = $false
 $script:batteryReads = 0
 $script:guard = $null
 $script:trialSent = [Collections.Generic.List[object]]::new()
+[string] $script:trialConnectStage = 'not-started'
+[bool] $script:failConnect = $FailConnect
 function Open-Gmk70TrialRadio {
     param([string] $BluetoothAddress, [switch] $ReadOnly, [scriptblock] $ReadGuard)
     if (-not $ReadOnly -or $null -eq $ReadGuard -or $BluetoothAddress -ne '') { throw 'Collector did not request bounded read-only discovery.' }
+    $script:trialConnectStage = 'discovery-name-selection'
+    if ($script:failConnect) { [void] (Find-Gmk70RadioNameIndex -Names ([string[]] @())) }
     $script:opened = $true
     $script:guard = $ReadGuard
 }

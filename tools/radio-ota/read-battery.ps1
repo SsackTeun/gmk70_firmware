@@ -25,7 +25,7 @@ $report = [ordered]@{
 $failed = $true
 $stage = 'connect'
 try {
-    Open-Gmk70TrialRadio -BluetoothAddress $BluetoothAddress -ReadOnly -ReadGuard { param($Packet) Assert-Gmk70BatteryReadPacket $Packet }
+    Open-Gmk70TrialRadio -BluetoothAddress $BluetoothAddress -ReadOnly -ReadGuard { param([byte[]] $Packet) Assert-Gmk70BatteryReadPacket $Packet }
     # Preserve the first battery state before code checks/extra Bluetooth traffic.
     $firstTime = [DateTime]::UtcNow.ToString('o')
     $stage = 'first battery read'
@@ -58,11 +58,15 @@ try {
     }
     $report.status = 'complete'
     $failed = $false
-} catch {
+}
+catch {
     $report.status = 'failed'
     # Do not include WinRT device paths, addresses, raw RAM or exception dumps.
     $report['error_type'] = $_.Exception.GetType().FullName
     $report['error_stage'] = $stage
+    if ($stage -eq 'connect') { $report['error_connect_stage'] = $script:trialConnectStage }
+    $report['error_details'] = Get-Gmk70RadioFailureDetail -Failure $_
+    Write-Information ('Capture failed during {0}: {1}' -f $stage, $report.error_details.exceptions[0].message) -InformationAction Continue
     Write-Host 'Capture stopped. The partial JSON retains any decoded samples; no retry was issued.'
 } finally {
     $report.requests = @($script:trialSent.ToArray())
