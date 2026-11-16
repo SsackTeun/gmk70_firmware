@@ -83,7 +83,7 @@ class RadioLifecycleTests(unittest.TestCase):
                     ROOT / "firmware/qmk-common/drivers/wireless/module.c",
                     ROOT / "firmware/qmk-common/drivers/wireless/wireless.c",
                     ROOT / "firmware/qmk-common/drivers/wireless/transport.c",
-                    ROOT / "firmware/qmk-common/drivers/wireless/radio_keys.c",
+                    ROOT / "firmware/common/radio/radio_keys.c",
                     ROOT / "firmware/qmk-common/drivers/wireless/smsg.c",
                     framework / "quantum/action_util.c",
                     framework / "tmk_core/protocol/report.c",

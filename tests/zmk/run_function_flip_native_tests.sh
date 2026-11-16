@@ -13,8 +13,8 @@ for radio in 0 1; do
             -include tests/zmk/function_flip_native_prelude.h -Itests/zmk/function_flip_native_stubs
             -Itests/zmk/function_flip_stubs -Itests/zmk/radio_kernel_stubs
             -Itests/zmk/radio_endpoint_stubs -Idependencies/zmk/app/include -Ifirmware/zmk/update
-            -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update
-            -Ifirmware/zmk/nkro -Ifirmware/qmk-common/drivers/wireless)
+            -Ifirmware/common/update
+            -Ifirmware/zmk/nkro -Ifirmware/common/radio)
         sources=()
         if [[ "$radio" == 1 ]]; then
             flags+=(-DCONFIG_GMK70_RADIO=1)
@@ -27,7 +27,7 @@ for radio in 0 1; do
             tests/zmk/function_flip_native_test.c ".work/zmk/tests/function-flip-native-hid-$separate_mod_release.o" \
             firmware/zmk/function_flip/core.c firmware/zmk/studio/bool_setting.c \
             tests/zmk/function_flip_native_nkro.c "${sources[@]}" \
-            firmware/qmk-common/drivers/wireless/radio_keys.c \
+            firmware/common/radio/radio_keys.c \
             -Wl,--wrap=zmk_hid_get_keyboard_report -Wl,--wrap=zmk_hid_get_boot_report \
             -Wl,--wrap=zmk_hid_implicit_modifiers_press -Wl,--wrap=zmk_hid_implicit_modifiers_release \
             -Wl,--wrap=zmk_hid_keyboard_clear -Wl,--wrap=zmk_hid_consumer_clear \

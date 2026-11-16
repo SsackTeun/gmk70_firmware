@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "settings_store.h"
-#include "image.h"
+#include "../../common/update/image.h"
 #include <errno.h>
 #include <string.h>
 

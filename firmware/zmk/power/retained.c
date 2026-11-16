@@ -2,7 +2,7 @@
 #include "retained.h"
 #include "retained_clock.h"
 #include "../wired/wired.h"
-#include "wb32_stop.h"
+#include "../../common/wb32/wb32_stop.h"
 #include <soc.h>
 #include <zephyr/kernel.h>
 #include <zephyr/irq.h>

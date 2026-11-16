@@ -11,12 +11,12 @@ for profile in permanent qualification relay studio battery radio; do
     if [[ "$profile" == radio ]]; then flags+=(-DCONFIG_GMK70_RADIO=1); fi
     if [[ "$profile" == relay ]]; then flags+=(-DCONFIG_GMK70_ZMK_PEER_TRIAL_RELAY=1); fi
     cc -DCONFIG_GMK70_ZMK_UPDATER=1 -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -fno-pie -no-pie \
-        -Itests/zmk/receiver_stubs -Ifirmware/zmk/update -Ifirmware/zmk/wired -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update "${flags[@]}" \
-        tests/zmk/receiver_test.c firmware/zmk/update/{receiver,battery_status}.c firmware/zmk/radio/control.c firmware/qmk-common/keyboards/zuoya/gmk70/update/{image,protocol,trial}.c -ffunction-sections -Wl,--gc-sections -o "artifacts/tests/zmk/receiver-$profile"
+        -Itests/zmk/receiver_stubs -Ifirmware/zmk/update -Ifirmware/zmk/wired -Ifirmware/common/update "${flags[@]}" \
+        tests/zmk/receiver_test.c firmware/zmk/update/{receiver,battery_status}.c firmware/zmk/radio/control.c firmware/common/update/{image,protocol,trial}.c -ffunction-sections -Wl,--gc-sections -o "artifacts/tests/zmk/receiver-$profile"
     "artifacts/tests/zmk/receiver-$profile"
 done
 cc -DCONFIG_GMK70_ZMK_UPDATER=1 -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=all -fno-pie -no-pie \
-    -Itests/zmk/receiver_stubs -Ifirmware/zmk/update -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update \
+    -Itests/zmk/receiver_stubs -Ifirmware/zmk/update -Ifirmware/common/update \
     tests/zmk/raw_hid_test.c firmware/zmk/update/raw_hid.c -o artifacts/tests/zmk/raw-hid
 artifacts/tests/zmk/raw-hid
 for profile in permanent qualification parity standalone; do
@@ -25,13 +25,13 @@ for profile in permanent qualification parity standalone; do
     if [[ "$profile" == parity || "$profile" == standalone ]]; then flags+=(-DCONFIG_GMK70_POWER=1 -DCONFIG_GMK70_CONTROLS=1 -DCONFIG_GMK70_FUNCTION_FLIP=1 -DCONFIG_GMK70_NKRO=1 -DCONFIG_GMK70_WB32_RGB=1 -DCONFIG_GMK70_ZMK_STUDIO_SETTINGS=1); fi
     if [[ "$profile" == standalone ]]; then flags+=(-UCONFIG_GMK70_ZMK_UPDATER -DCONFIG_GMK70_STANDALONE=1); fi
     cc -DCONFIG_GMK70_ZMK_UPDATER=1 -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=all -fno-pie -no-pie \
-        -Itests/zmk/receiver_stubs -Ifirmware/zmk/update -Ifirmware/zmk/wired -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update "${flags[@]}" \
+        -Itests/zmk/receiver_stubs -Ifirmware/zmk/update -Ifirmware/zmk/wired -Ifirmware/common/update "${flags[@]}" \
         tests/zmk/service_test.c -o "artifacts/tests/zmk/update-service-$profile"
     "artifacts/tests/zmk/update-service-$profile"
 done
 cc -DCONFIG_GMK70_ZMK_UPDATER=1 -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=all -fno-pie -no-pie \
-    -Itests/zmk/receiver_stubs -Ifirmware/zmk/update -Ifirmware/zmk/wired -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update \
-    tests/zmk/service_boundary_test.c firmware/zmk/update/receiver.c firmware/qmk-common/keyboards/zuoya/gmk70/update/{image,protocol}.c \
+    -Itests/zmk/receiver_stubs -Ifirmware/zmk/update -Ifirmware/zmk/wired -Ifirmware/common/update \
+    tests/zmk/service_boundary_test.c firmware/zmk/update/receiver.c firmware/common/update/{image,protocol}.c \
     -o artifacts/tests/zmk/service-boundary
 artifacts/tests/zmk/service-boundary
 artifacts/tests/zmk/service-boundary gates
@@ -39,8 +39,8 @@ for profile in permanent qualification; do
     flags=()
     if [[ "$profile" == qualification ]]; then flags+=(-DCONFIG_GMK70_STAGING_QUALIFICATION=1); fi
     cc -DCONFIG_GMK70_ZMK_UPDATER=1 -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -fno-pie -no-pie \
-        -Itests/zmk/receiver_stubs -Ifirmware/zmk/update -Ifirmware/zmk/wired -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update "${flags[@]}" \
-        tests/zmk/service_lifecycle_test.c firmware/zmk/update/{raw_hid,receiver}.c firmware/qmk-common/keyboards/zuoya/gmk70/update/{image,protocol}.c \
+        -Itests/zmk/receiver_stubs -Ifirmware/zmk/update -Ifirmware/zmk/wired -Ifirmware/common/update "${flags[@]}" \
+        tests/zmk/service_lifecycle_test.c firmware/zmk/update/{raw_hid,receiver}.c firmware/common/update/{image,protocol}.c \
         -o "artifacts/tests/zmk/service-lifecycle-$profile"
     "artifacts/tests/zmk/service-lifecycle-$profile"
     "artifacts/tests/zmk/service-lifecycle-$profile" failure

@@ -1,4 +1,4 @@
-#include "../../../core/indicators.h"
+#include "../../../../common/core/indicators.h"
 // Copyright 2024 yangzheng20003 (@yangzheng20003)
 // SPDX-License-Identifier: GPL-2.0-or-later
 
@@ -15,7 +15,7 @@
 #endif
 #include "stock_battery.h"
 #include "function_flip_qmk.h"
-#include "stock_power.h"
+#include "../../../../common/power/stock_power.h"
 #include "stock_v15.h"
 void last_matrix_activity_trigger(void);
 #ifdef VIA_ENABLE

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
-#include "protocol.h"
+#include "../../../../../common/update/protocol.h"
 
 enum { GMK_EEPROM_ABI = 1, GMK_EEPROM_LAYOUT = 15 };
 

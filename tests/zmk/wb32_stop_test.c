@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-#include "../../firmware/qmk-common/drivers/wireless/wb32_stop.h"
+#include "../../firmware/common/wb32/wb32_stop.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>

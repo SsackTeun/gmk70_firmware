@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "update/trial.h"
+#include "../../firmware/common/update/trial.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

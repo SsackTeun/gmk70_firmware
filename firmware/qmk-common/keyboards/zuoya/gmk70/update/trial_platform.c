@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "trial_platform.h"
-#include "trial.h"
+#include "../../../../../common/update/trial.h"
 #include "trial_role.h"
 #include "trial_watchdog.h"
 

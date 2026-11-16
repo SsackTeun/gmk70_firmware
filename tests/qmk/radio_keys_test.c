@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-#include "radio_keys.h"
+#include "../../firmware/common/radio/radio_keys.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

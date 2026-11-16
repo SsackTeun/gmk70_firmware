@@ -7,7 +7,7 @@
  * Radio frames share this sole UART3 owner; the external module is unchanged.
  */
 #include "battery.h"
-#include "../../qmk-common/core/radio_protocol.h"
+#include "../../common/core/radio_protocol.h"
 #include "wired.h"
 #ifdef CONFIG_GMK70_RADIO
 #    include "radio.h"

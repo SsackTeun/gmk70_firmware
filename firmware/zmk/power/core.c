@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "core.h"
-#include "../../qmk-common/core/policy.h"
+#include "../../common/core/policy.h"
 
 static bool critical_reading(const struct gmk_power_inputs *inputs) {
     return gmk70_battery_warning(inputs->battery_valid, inputs->battery_percentage, inputs->battery_age_ms, inputs->cable);

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "qmk_update.h"
-#include "protocol.h"
+#include "../../../../../common/update/protocol.h"
 #ifdef GMK70_VIAL_TRIAL
 #    ifndef GMK70_VIAL_UPDATE
 #        error "The trial receiver requires native Vial authorization"
 #    endif
-#    include "trial.h"
+#    include "../../../../../common/update/trial.h"
 #    include "trial_platform.h"
 #    include "trial_peer.h"
 static bool               trial_reset_pending;

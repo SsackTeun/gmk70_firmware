@@ -12,14 +12,14 @@ common_flags=(
     -Idependencies/qmk/quantum -Idependencies/qmk/quantum/keymap_extras -Idependencies/qmk/quantum/sequencer -Idependencies/qmk/tmk_core/protocol
 )
 cc "${common_flags[@]}" tests/qmk/update_test.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/update/image.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/update/protocol.c \
+    firmware/common/update/image.c \
+    firmware/common/update/protocol.c \
     -o artifacts/tests/qmk/updater
 artifacts/tests/qmk/updater
 cc "${common_flags[@]}" tests/qmk/trial_test.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/update/image.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/update/protocol.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/update/trial.c \
+    firmware/common/update/image.c \
+    firmware/common/update/protocol.c \
+    firmware/common/update/trial.c \
     -o artifacts/tests/qmk/trial
 artifacts/tests/qmk/trial
 for component in watchdog boot peer role deadline; do
@@ -32,8 +32,8 @@ cc "${common_flags[@]}" -DGMK_TRIAL_PLATFORM_TEST -ffunction-sections -fdata-sec
     tests/qmk/trial_platform_test.c \
     firmware/qmk-common/keyboards/zuoya/gmk70/update/trial_platform.c \
     firmware/qmk-common/keyboards/zuoya/gmk70/update/trial_boot.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/update/image.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/update/trial.c \
+    firmware/common/update/image.c \
+    firmware/common/update/trial.c \
     -o artifacts/tests/qmk/trial-platform
 artifacts/tests/qmk/trial-platform
 for profile in native faults; do
@@ -47,7 +47,7 @@ for profile in native faults; do
     "artifacts/tests/qmk/module-$profile"
 done
 cc "${common_flags[@]}" tests/qmk/stock_power_test.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/stock_power.c -o artifacts/tests/qmk/stock-power
+    firmware/common/power/stock_power.c -o artifacts/tests/qmk/stock-power
 artifacts/tests/qmk/stock-power
 settings_flags=(
     -Itests/qmk/stock_settings_stubs -Idependencies/qmk/platforms
@@ -83,7 +83,7 @@ for endpoint in dedicated shared; do
         '-DPRODUCT="ZUOYA GMK70"' '-DMANUFACTURER="HS"' -DVENDOR_ID=0x342d -DPRODUCT_ID=0xe491 \
         tests/qmk/host_switch_test.c firmware/qmk-common/drivers/wireless/transport.c \
         firmware/qmk-common/drivers/wireless/wireless.c firmware/qmk-common/drivers/wireless/module.c \
-        firmware/qmk-common/drivers/wireless/radio_keys.c \
+        firmware/common/radio/radio_keys.c \
         firmware/qmk-common/drivers/wireless/smsg.c -o "artifacts/tests/qmk/host-switch-$endpoint"
     "artifacts/tests/qmk/host-switch-$endpoint"
 done
@@ -102,7 +102,7 @@ for endpoint in dedicated shared; do
     cc "${common_flags[@]}" -DRAW_ENABLE "${endpoint_flags[@]}" \
         tests/qmk/wireless_test.c tests/qmk/radio_fixture.c \
         firmware/qmk-common/drivers/wireless/wireless.c firmware/qmk-common/drivers/wireless/md_raw.c \
-        firmware/qmk-common/drivers/wireless/radio_keys.c \
+        firmware/common/radio/radio_keys.c \
         -Wl,--wrap=raw_hid_send -o "artifacts/tests/qmk/wireless-$endpoint"
     "artifacts/tests/qmk/wireless-$endpoint"
 done
@@ -119,11 +119,11 @@ artifacts/tests/qmk/vial-manual-keys
 cc "${common_flags[@]}" -Itests/qmk/stock_battery_stubs \
     -include firmware/qmk-common/keyboards/zuoya/gmk70/config.h \
     tests/qmk/stock_battery_test.c firmware/qmk-common/keyboards/zuoya/gmk70/stock_battery.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/battery_holds.c \
+    firmware/common/battery/battery_holds.c \
     -o artifacts/tests/qmk/stock-battery
 artifacts/tests/qmk/stock-battery
 cc "${common_flags[@]}" tests/qmk/battery_holds_test.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/battery_holds.c -o artifacts/tests/qmk/battery-holds
+    firmware/common/battery/battery_holds.c -o artifacts/tests/qmk/battery-holds
 artifacts/tests/qmk/battery-holds
 for framework in qmk vial-qmk; do
     for fixture in rgb activity; do
@@ -140,8 +140,8 @@ for framework in qmk vial-qmk; do
             firmware/qmk-common/keyboards/zuoya/gmk70/pairing_hold.c \
             "dependencies/$framework/quantum/deferred_exec.c" \
             firmware/qmk-common/keyboards/zuoya/gmk70/stock_battery.c \
-            firmware/qmk-common/keyboards/zuoya/gmk70/battery_holds.c \
-            firmware/qmk-common/keyboards/zuoya/gmk70/stock_power.c \
+            firmware/common/battery/battery_holds.c \
+            firmware/common/power/stock_power.c \
             -o "artifacts/tests/qmk/hardware-$framework-$fixture"
         "artifacts/tests/qmk/hardware-$framework-$fixture"
     done
@@ -172,7 +172,7 @@ done
 cc -Itests/qmk/vial_stubs "${common_flags[@]}" -DEEPROM_TEST_HARNESS -Idependencies/qmk/platforms \
     -DCOMBO_ENABLE -DREPEAT_KEY_ENABLE -DMATRIX_ROWS=10 -DMATRIX_COLS=9 tests/qmk/vial_adapter_test.c \
     tests/qmk/stock_v15_fixture.c firmware/qmk-vial/compat/vial_adapter.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/stock_power.c -o artifacts/tests/qmk/vial-adapter
+    firmware/common/power/stock_power.c -o artifacts/tests/qmk/vial-adapter
 artifacts/tests/qmk/vial-adapter
 cc -Itests/qmk/vial_stubs -Itests/qmk/update_stubs "${common_flags[@]}" \
     -Itests/qmk/bootloader_stubs -Itests/qmk/lowpower_stubs -Idependencies/qmk/platforms \
@@ -181,8 +181,8 @@ cc -Itests/qmk/vial_stubs -Itests/qmk/update_stubs "${common_flags[@]}" \
     -ffunction-sections -fdata-sections -Wl,--gc-sections \
     tests/qmk/update_adapter_test.c tests/qmk/stock_v15_fixture.c \
     firmware/qmk-vial/compat/vial_adapter.c firmware/qmk-common/drivers/wireless/md_raw.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/update/image.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/update/protocol.c \
+    firmware/common/update/image.c \
+    firmware/common/update/protocol.c \
     firmware/qmk-common/keyboards/zuoya/gmk70/update/qmk_update.c \
     -Wl,--wrap=raw_hid_send -o artifacts/tests/qmk/vial-updater
 artifacts/tests/qmk/vial-updater
@@ -196,16 +196,16 @@ for trial_profile in early runtime; do
         -ffunction-sections -fdata-sections -Wl,--gc-sections \
         tests/qmk/update_adapter_test.c tests/qmk/stock_v15_fixture.c \
         firmware/qmk-vial/compat/vial_adapter.c firmware/qmk-common/drivers/wireless/md_raw.c \
-        firmware/qmk-common/keyboards/zuoya/gmk70/update/image.c \
-        firmware/qmk-common/keyboards/zuoya/gmk70/update/protocol.c \
+        firmware/common/update/image.c \
+        firmware/common/update/protocol.c \
         firmware/qmk-common/keyboards/zuoya/gmk70/update/qmk_update.c \
-        firmware/qmk-common/keyboards/zuoya/gmk70/update/trial.c \
+        firmware/common/update/trial.c \
         -Wl,--wrap=raw_hid_send -Wl,--wrap=gmk_trial_process -o "artifacts/tests/qmk/vial-trial-$trial_profile"
     "artifacts/tests/qmk/vial-trial-$trial_profile"
 done
 cc "${common_flags[@]}" -DGMK70_TRIAL_RUNTIME -DGMK_TRIAL_RUNTIME_TEST \
     tests/qmk/trial_runtime_test.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/update/image.c \
+    firmware/common/update/image.c \
     firmware/qmk-common/keyboards/zuoya/gmk70/update/trial_runtime.c \
     firmware/qmk-common/keyboards/zuoya/gmk70/update/trial_boot.c \
     firmware/qmk-common/keyboards/zuoya/gmk70/update/trial_deadline.c \
@@ -232,8 +232,8 @@ for profile in release debug persistent; do
     cc -Itests/qmk/update_stubs "${common_flags[@]}" -Itests/qmk/bootloader_stubs -Itests/qmk/lowpower_stubs \
         -DRAW_ENABLE -DGMK70_SPLIT_UPDATE -DEEPROM_CUSTOM -DEEPROM_SIZE=4096 -Idependencies/qmk/platforms \
         "${profile_flags[@]}" tests/qmk/update_adapter_test.c \
-        firmware/qmk-common/keyboards/zuoya/gmk70/update/image.c \
-        firmware/qmk-common/keyboards/zuoya/gmk70/update/protocol.c \
+        firmware/common/update/image.c \
+        firmware/common/update/protocol.c \
         firmware/qmk-common/keyboards/zuoya/gmk70/update/qmk_update.c \
         firmware/qmk-common/keyboards/zuoya/gmk70/update/eeprom_query.c \
         "${log_sources[@]}" \
@@ -251,8 +251,8 @@ cc "${common_flags[@]}" -Itests/qmk/split_diagnostic_stubs -DGMK70_SPLIT_DIAGNOS
     tests/qmk/sleep_log_test.c firmware/qmk-common/keyboards/zuoya/gmk70/sleep_log.c \
     firmware/qmk-common/keyboards/zuoya/gmk70/split_diagnostics.c \
     firmware/qmk-common/keyboards/zuoya/gmk70/update/sleep_log_query.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/update/protocol.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/update/image.c -o artifacts/tests/qmk/sleep-log
+    firmware/common/update/protocol.c \
+    firmware/common/update/image.c -o artifacts/tests/qmk/sleep-log
 artifacts/tests/qmk/sleep-log
 cc -Itests/qmk/sleep_log_stubs "${common_flags[@]}" -Idependencies/qmk/drivers/flash -Idependencies/qmk/drivers/wear_leveling \
     -DEXTERNAL_FLASH_SPI_SLAVE_SELECT_PIN=12 \

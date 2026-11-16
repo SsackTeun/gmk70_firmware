@@ -8,8 +8,8 @@ if [[ "$backend" == studio ]]; then flags+=(-DCONFIG_GMK70_ZMK_STUDIO_SETTINGS=1
 cc -std=c11 -Wall -Wextra -Werror -Wconversion -Wsign-conversion -O1 -g -fno-pie -no-pie -fsanitize=address,undefined \
     -DCONFIG_GMK70_RADIO=1 -DCONFIG_ZMK_HID_REPORT_TYPE_NKRO=1 -DCONFIG_GMK70_CONTROLS=1 "${flags[@]}" \
     -Itests/zmk/function_flip_stubs -Itests/zmk/radio_kernel_stubs -Itests/zmk/radio_endpoint_stubs \
-    -Ifirmware/zmk/update -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update \
-    tests/zmk/nkro_test.c firmware/zmk/studio/bool_setting.c firmware/qmk-common/drivers/wireless/radio_keys.c \
+    -Ifirmware/zmk/update -Ifirmware/common/update \
+    tests/zmk/nkro_test.c firmware/zmk/studio/bool_setting.c firmware/common/radio/radio_keys.c \
     -o ".work/zmk/tests/nkro-$backend"
 ".work/zmk/tests/nkro-$backend"
 done

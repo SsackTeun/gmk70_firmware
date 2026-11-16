@@ -5,8 +5,9 @@ with adapters for framework operations. This records that approved direction.
 
 ## Scope and architecture
 
-Keep authoritative code under `firmware/qmk-common`, as required by AGENTS.md.
-Add a framework-independent C core there. Both QMK Make and Zephyr CMake compile
+The user subsequently required a neutral location: framework-independent code
+lives under `firmware/common/`; QMK/ChibiOS adapters stay in `qmk-common`.
+AGENTS.md records this boundary. Both QMK Make and Zephyr CMake compile
 the same sources directly. There is no copied source tree, generated duplicate
 implementation, dependency edit, new runtime, or common prebuilt binary.
 

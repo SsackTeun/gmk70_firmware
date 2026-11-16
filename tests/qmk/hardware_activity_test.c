@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "quantum.h"
 #include "wireless.h"
-#include "stock_power.h"
+#include "../../firmware/common/power/stock_power.h"
 #include "stock_battery.h"
 #include "transactions.h"
 

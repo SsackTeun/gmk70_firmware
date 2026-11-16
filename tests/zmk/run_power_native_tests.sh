@@ -16,7 +16,7 @@ cc -std=c11 -Wall -Wextra -Werror -O1 -g -fno-pie -no-pie -fsanitize=address,und
     -DCONFIG_GMK70_ZMK_STUDIO_SETTINGS=1 -DCONFIG_ZMK_IDLE_TIMEOUT=30000 \
     -DCONFIG_ZMK_POINTING=1 \
     -Itests/zmk/power_native_stubs -Itests/zmk/stubs -Idependencies/zmk/app/include -Idependencies/zephyr/include -Ifirmware/zmk/update \
-    -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update -Ifirmware/qmk-common/drivers/wireless -Ifirmware/zmk/wired \
+    -Ifirmware/common/update -Ifirmware/common/wb32 -Ifirmware/zmk/wired \
     "${sources[@]}" -Wl,--wrap=zmk_pm_suspend_devices -Wl,--wrap=zmk_pm_resume_devices \
     -Wl,--wrap=zmk_pm_soft_off \
     -Wl,--wrap=zmk_usb_get_conn_state -o .work/zmk/tests/power-native
@@ -32,7 +32,7 @@ cc -std=c11 -Wall -Wextra -Werror -O1 -g -fno-pie -no-pie -fsanitize=address,und
     -DCONFIG_GMK70_ZMK_STUDIO_SETTINGS=1 -DCONFIG_ZMK_IDLE_TIMEOUT=30000 -DCONFIG_ZMK_POINTING=1 \
     -Itests/zmk/power_native_stubs -Itests/zmk/stubs -Idependencies/zmk/app/include \
     -Itests/zmk/function_flip_stubs -Idependencies/zephyr/include -Ifirmware/zmk/update \
-    -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update -Ifirmware/qmk-common/drivers/wireless -Ifirmware/zmk/wired \
+    -Ifirmware/common/update -Ifirmware/common/wb32 -Ifirmware/zmk/wired \
     "${sources[@]}" firmware/zmk/lighting/rgb_settings.c tests/zmk/power_rgb_fixture.c \
     -Wl,--wrap=zmk_pm_suspend_devices -Wl,--wrap=zmk_pm_resume_devices -Wl,--wrap=zmk_pm_soft_off \
     -Wl,--wrap=zmk_usb_get_conn_state -Wl,--wrap=settings_save_one \
@@ -47,7 +47,7 @@ cc -std=c11 -Wall -Wextra -Werror -O1 -g -fno-pie -no-pie -fsanitize=address,und
     -DCONFIG_GMK70_ZMK_STUDIO_SETTINGS=1 -DCONFIG_ZMK_IDLE_TIMEOUT=30000 \
     -DCONFIG_ZMK_POINTING=1 \
     -Itests/zmk/power_native_stubs -Itests/zmk/stubs -Idependencies/zmk/app/include -Idependencies/zephyr/include -Ifirmware/zmk/update \
-    -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update -Ifirmware/qmk-common/drivers/wireless -Ifirmware/zmk/wired \
+    -Ifirmware/common/update -Ifirmware/common/wb32 -Ifirmware/zmk/wired \
     "${sources[@]}" -Wl,--wrap=zmk_pm_suspend_devices -Wl,--wrap=zmk_pm_resume_devices \
     -Wl,--wrap=zmk_pm_soft_off \
     -Wl,--wrap=zmk_usb_get_conn_state -o .work/zmk/tests/power-retained

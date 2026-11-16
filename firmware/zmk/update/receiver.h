@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #pragma once
-#include "protocol.h"
+#include "../../common/update/protocol.h"
 #include "../runtime/service.h"
 
 typedef gmk_zmk_service_env_t gmk_zmk_update_env_t;

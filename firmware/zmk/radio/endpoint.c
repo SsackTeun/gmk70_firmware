@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "radio.h"
-#include "radio_keys.h"
+#include "../../common/radio/radio_keys.h"
 #include <errno.h>
 #include <string.h>
 #include <dt-bindings/zmk/hid_usage_pages.h>

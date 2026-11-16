@@ -20,7 +20,7 @@ cc -std=c11 -Wall -Wextra -Werror -fno-pie -no-pie \
     -Itests/zmk/wired_stubs -Itests/zmk/clock_stubs \
     -Ifirmware/zmk/lighting -Ifirmware/zmk/wired -Ifirmware/zmk/battery \
     tests/zmk/pixels_test.c firmware/zmk/lighting/lighting_frame.c \
-    firmware/zmk/lighting/battery_view.c firmware/qmk-common/keyboards/zuoya/gmk70/battery_holds.c \
+    firmware/zmk/lighting/battery_view.c firmware/common/battery/battery_holds.c \
     firmware/zmk/wired/wired_protocol.c -Wl,--wrap=gmk_protocol_lighting \
     -o artifacts/tests/zmk/pixels-lighting
 artifacts/tests/zmk/pixels-lighting

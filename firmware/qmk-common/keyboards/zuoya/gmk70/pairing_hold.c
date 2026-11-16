@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "pairing_hold.h"
-#include "../../../core/selection.h"
+#include "../../../../common/core/selection.h"
 #include "deferred_exec.h"
 #include "stock_keycodes.h"
 #include "wireless.h"

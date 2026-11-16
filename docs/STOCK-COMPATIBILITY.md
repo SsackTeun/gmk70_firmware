@@ -59,7 +59,7 @@ are unchanged.
   authorization. Right peers inherit authorization from the USB master. Reads
   and rejected mutations do not renew an unfinished upload's ten-second lease.
 
-The held-position bitsets in `qmk-common/.../battery_holds.c` are also used by
+The held-position bitsets in `firmware/common/battery/battery_holds.c` are used by
 ZMK. Framework event hooks, keycode adapters, radio I/O and updater integration
 remain local to each stack. These changes have native regression coverage;
 hardware acceptance is a separate step.

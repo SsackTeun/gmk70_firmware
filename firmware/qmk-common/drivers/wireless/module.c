@@ -3,7 +3,7 @@
 
 #include "quantum.h"
 #include "module.h"
-#include "../../core/radio_protocol.h"
+#include "../../../common/core/radio_protocol.h"
 #include "smsg.h"
 #include "uart.h"
 #include "radio_capture.h"

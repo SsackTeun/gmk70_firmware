@@ -13,7 +13,7 @@ ifeq ($(strip $(WIRELESS_ENABLE)), yes)
 
     SRC += \
         $(WIRELESS_DIR)/wireless.c \
-        $(WIRELESS_DIR)/radio_keys.c \
+        $(GMK70_SHARED_DIR)/radio/radio_keys.c \
         $(WIRELESS_DIR)/transport.c \
         $(WIRELESS_DIR)/lowpower.c \
         $(WIRELESS_DIR)/md_raw.c \
@@ -27,6 +27,6 @@ ifeq ($(strip $(WIRELESS_ENABLE)), yes)
 
     ifeq ($(strip $(WIRELESS_LPWR_STOP_ENABLE)), yes)
         OPT_DEFS += -DWIRELESS_LPWR_STOP_ENABLE
-        SRC += $(WIRELESS_DIR)/lpwr_wb32.c $(WIRELESS_DIR)/wb32_stop.c $(WIRELESS_DIR)/wb32_stop_hw.c
+        SRC += $(WIRELESS_DIR)/lpwr_wb32.c $(GMK70_SHARED_DIR)/wb32/wb32_stop.c $(GMK70_SHARED_DIR)/wb32/wb32_stop_hw.c
     endif
 endif

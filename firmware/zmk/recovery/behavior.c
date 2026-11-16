@@ -1,4 +1,4 @@
-#include "../../qmk-common/core/hold.h"
+#include "../../common/core/hold.h"
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #define DT_DRV_COMPAT zuoya_gmk70_behavior_recovery
 #include "recovery.h"

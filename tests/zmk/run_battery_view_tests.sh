@@ -2,7 +2,7 @@
 set -euo pipefail
 source "$(dirname "$0")/../../scripts/project.sh"
 mkdir -p artifacts/tests/zmk
-holds=firmware/qmk-common/keyboards/zuoya/gmk70/battery_holds.c
+holds=firmware/common/battery/battery_holds.c
 flags=(-std=c11 -Wall -Wextra -Werror -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
        -Ifirmware/zmk/lighting -Ifirmware/zmk/battery -Ifirmware/zmk/wired)
 cc "${flags[@]}" tests/zmk/battery_view_test.c firmware/zmk/lighting/battery_view.c "$holds" -o artifacts/tests/zmk/battery-view

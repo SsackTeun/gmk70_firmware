@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include <assert.h>
 #include <stdio.h>
-#include "stock_power.h"
+#include "../../firmware/common/power/stock_power.h"
 int main(void) {
     assert(stock_power_prepare_allowed(false));
     for (unsigned i = 0; i < 8; ++i)

@@ -10,7 +10,7 @@
 #include <ucontext.h>
 #include "../../firmware/zmk/power/retained.h"
 #include "../../firmware/zmk/power/retained_clock.h"
-#include "wb32_stop.h"
+#include "../../firmware/common/wb32/wb32_stop.h"
 #include "../../firmware/zmk/power/retained_math.h"
 
 uint32_t test_primask, test_basepri;

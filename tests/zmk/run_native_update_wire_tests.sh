@@ -16,7 +16,7 @@ cc -std=c11 -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=all
     -Itests/zmk/wired_stubs -Itests/zmk/radio_native_stubs \
     -Idependencies/zmk/app/include -Idependencies/zephyr/include \
     -Idependencies/zmk/app/src/split -Ifirmware/zmk/wired \
-    -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update \
+    -Ifirmware/common/update \
     tests/zmk/native_update_bridge_test.c firmware/zmk/wired/native_update_bridge.c \
     firmware/zmk/wired/native_update_wire.c dependencies/zmk/app/src/split/wired/wired.c \
     dependencies/zephyr/lib/utils/ring_buffer.c dependencies/zephyr/lib/crc/crc32_sw.c \

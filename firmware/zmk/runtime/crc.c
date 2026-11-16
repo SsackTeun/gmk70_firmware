@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-#include "../../qmk-common/keyboards/zuoya/gmk70/update/image.h"
+#include "../../common/update/image.h"
 
 /* Native split framing and the resident/settings format use the same IEEE
  * CRC32. Share its existing implementation without retaining a second table.

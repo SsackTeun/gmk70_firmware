@@ -8,7 +8,7 @@ flags=(-std=gnu11 -O1 -g -Wall -Wextra -Werror -pthread -fno-pie -fsanitize=addr
   -DCONFIG_SETTINGS=1 -DCONFIG_GMK70_ZMK_STUDIO_SETTINGS=1 -DCONFIG_ZMK_RGB_UNDERGLOW_AUTO_OFF_IDLE=1
   -include tests/zmk/rgb_idle_native_prelude.h -Itests/zmk/rgb_native_stubs
   -Itests/zmk/studio_stubs -Idependencies/zmk/app/include -Itests/zmk/function_flip_stubs
-  -Itests/zmk/controls_stubs -Ifirmware/zmk/update -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update)
+  -Itests/zmk/controls_stubs -Ifirmware/zmk/update -Ifirmware/common/update)
 cc "${flags[@]}" -Wno-unused-parameter \
   -DCONFIG_ZMK_RGB_UNDERGLOW_BRT_MIN=0 -DCONFIG_ZMK_RGB_UNDERGLOW_BRT_MAX=100 \
   -DCONFIG_ZMK_RGB_UNDERGLOW_HUE_START=0 -DCONFIG_ZMK_RGB_UNDERGLOW_SAT_START=100 \

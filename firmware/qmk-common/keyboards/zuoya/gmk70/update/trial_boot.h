@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
-#include "image.h"
+#include "../../../../../common/update/image.h"
 
 enum {
     GMK_TRIAL_BOOT_RECORD_ADDRESS = 0x20000000,

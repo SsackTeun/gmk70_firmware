@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Resident installer: no scheduler, mutable globals, QMK calls, or application
 // dependencies. Its whole ELF must fit below GMK_APP_BASE and has no data/BSS.
-#include "image.h"
+#include "../../../../../common/update/image.h"
 #include "hal.h"
 
 __attribute__((naked, noreturn)) static void jump_vector(uint32_t address) {

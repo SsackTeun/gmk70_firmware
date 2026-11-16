@@ -3,7 +3,7 @@
 #include "rgb_matrix.h"
 #include "lowpower.h"
 #include "stock_battery.h"
-#include "stock_power.h"
+#include "../../../../common/power/stock_power.h"
 #include "wireless.h"
 #include "pairing_hold.h"
 #include "rgb_idle.h"

@@ -11,7 +11,7 @@ flags=(-std=c11 -Wall -Wextra -Werror -O1 -g -fno-pie -fsanitize=address,undefin
     -Itests/zmk/radio_native_stubs -Itests/zmk/radio_kernel_stubs
     -Itests/zmk/radio_behavior_stubs -Itests/zmk/radio_endpoint_stubs
     -Idependencies/zmk/app/include -Ifirmware/zmk/update
-    -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update)
+    -Ifirmware/common/update)
 cc "${flags[@]}" -O2 -Wno-unused-parameter -DRADIO_NATIVE_SOURCE=1 \
     -c dependencies/zmk/app/src/keymap.c -o .work/zmk/tests/recovery-native-keymap.o
 cc "${flags[@]}" -no-pie -Wl,--gc-sections tests/zmk/recovery_settings_test.c \

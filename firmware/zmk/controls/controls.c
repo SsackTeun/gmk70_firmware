@@ -1,4 +1,4 @@
-#include "../../qmk-common/core/indicators.h"
+#include "../../common/core/indicators.h"
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "controls.h"
 #include "../runtime/idle.h"
@@ -7,7 +7,7 @@
 #ifdef CONFIG_GMK70_RADIO
 #    include "../radio/radio.h"
 #endif
-#include "../../qmk-common/keyboards/zuoya/gmk70/stock_power.h"
+#include "../../common/power/stock_power.h"
 #ifdef CONFIG_GMK70_ZMK_STUDIO_SETTINGS
 #    include "../studio/settings_backend.h"
 #endif

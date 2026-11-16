@@ -2,7 +2,7 @@
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
-#include "../../qmk-common/core/selection.h"
+#include "../../common/core/selection.h"
 
 /* Zero initialization is sufficient; all times use wrapping millisecond ticks. */
 struct gmk_radio_selector {

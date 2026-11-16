@@ -109,7 +109,7 @@ class RadioCaptureTests(unittest.TestCase):
                     "tests/qmk/radio_vial_test.c",
                     "tests/qmk/stock_v15_fixture.c",
                     "firmware/qmk-vial/compat/vial_adapter.c",
-                    "firmware/qmk-common/keyboards/zuoya/gmk70/stock_power.c",
+                    "firmware/common/power/stock_power.c",
                     "firmware/qmk-common/drivers/wireless/radio_capture.c",
                 )
             ]

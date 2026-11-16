@@ -1,26 +1,30 @@
-# Shared GMK70 core
+# Shared GMK70 library
 
-VIA, Vial and ZMK compile this framework-independent C library from the same
-maintained headers. The small routines are inline so each build can specialize
-its adapter policies and discard unused paths within the fixed firmware slots.
+VIA, Vial and ZMK compile these framework-independent GMK70 sources directly.
+Portable policy and protocol helpers live in `core/`; compiled implementations
+live in `battery/`, `power/`, `radio/`, `update/` and `wb32/`. Small core routines
+are inline so each build can specialize its adapter policies and discard unused
+paths within the fixed firmware slots.
 There is no generated/copy tree, separate runtime, heap, or new worker.
 
 | Common implementation | VIA / Vial consumer | ZMK consumer |
 | --- | --- | --- |
-| `board.h`: physical LED data and battery thresholds | board config and indicators | lighting and controls |
-| `policy.h`: channel/status translation, timing, freshness, charger and critical/inactivity decisions | wireless, lowpower and board adapters | radio, battery and power adapters |
-| `radio_commands.h`: stock external-radio wire ABI | module API | radio core and battery UART owner |
-| `radio_protocol.h`: packet construction, checksum, streaming RX and bounded raw-tail quarantine | `drivers/wireless/module.c` | `battery/battery.c`, `radio/core.c` |
-| `radio_tx.h`: ACK deadlines, finite retry decisions and task-phase helper | module task and native SMSG queue | radio service worker |
-| `selection.h`: physical-selector debounce | `wls/wls.c` | `radio/selection.c` |
-| `hold.h`: source-position ownership and hold deadline | pairing adapter | radio selector |
-| `function_flip.h`: stock HID mappings and held/release state | native QMK keycode converter | native ZMK HID converter |
-| `indicators.h`: battery segments, charging/radio colors, radio LED selection and blink phase | stock battery and radio indicators | battery view and controls |
+| `core/board.h`: physical LED data and battery thresholds | board config and indicators | lighting and controls |
+| `core/policy.h`: channel/status translation, timing, freshness, charger and critical/inactivity decisions | wireless, lowpower and board adapters | radio, battery and power adapters |
+| `core/radio_commands.h`: stock external-radio wire ABI | module API | radio core and battery UART owner |
+| `core/radio_protocol.h`: packet construction, checksum, streaming RX and bounded raw-tail quarantine | `drivers/wireless/module.c` | `battery/battery.c`, `radio/core.c` |
+| `core/radio_tx.h`: ACK deadlines, finite retry decisions and task-phase helper | module task and native SMSG queue | radio service worker |
+| `core/selection.h`: physical-selector debounce | `wls/wls.c` | `radio/selection.c` |
+| `core/hold.h`: source-position ownership and hold deadline | pairing adapter | radio selector |
+| `core/function_flip.h`: stock HID mappings and held/release state | native QMK keycode converter | native ZMK HID converter |
+| `core/indicators.h`: battery segments, charging/radio colors, radio LED selection and blink phase | stock battery and radio indicators | battery view and controls |
 
-Existing common implementations remain authoritative too: `battery_holds.c`,
-`stock_power.c`, wireless `radio_keys.c` and `wb32_stop*.c`, and updater
-`image.c`/`protocol.c`. ZMK compiles those sources directly through CMake;
-QMK/Vial use their ordinary external-source Make integration.
+The compiled shared sources are `battery/battery_holds.c`,
+`power/stock_power.c`, `radio/radio_keys.c`, `wb32/wb32_stop*.c`, and
+`update/image.c`, `update/protocol.c` and `update/trial.c`. There are no copies
+or forwarding headers at their old QMK locations. Zephyr CMake and QMK/Vial
+Make compile these actual files. QMK/ChibiOS adapters remain in
+`firmware/qmk-common/`; ZMK/Zephyr adapters remain in `firmware/zmk/`.
 
 ## Adapter boundaries
 
@@ -76,3 +80,9 @@ and both canonical ZMK builds with pinned xPack GCC 14.2.1. The ZMK updater uses
 101,288/114,688 application bytes and 27,164/28,544 RAM bytes. These RAM figures
 are linker reservations, not measured peak usage. Resident/settings boundaries,
 dependency revisions and the VIA definition are preserved.
+
+The neutral-directory extraction moved all 24 shared C/header files unchanged,
+along with this README. All ten canonical builds and the full regression/tooling
+checks passed again. The pinned-Zephyr permanent/qualification/relay receiver
+compile check also passed. The resident retains CRC `0x698B3EC1`; the canonical
+ZMK updater application is byte-identical to the pre-move image.

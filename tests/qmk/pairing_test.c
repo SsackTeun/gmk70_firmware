@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include <assert.h>
-#include "../../firmware/qmk-common/core/selection.h"
+#include "../../firmware/common/core/selection.h"
 #include <stdio.h>
 #include <string.h>
 #include "quantum.h"

@@ -11,7 +11,7 @@
 #include "../lighting/rgb_settings.h"
 #include "../lighting/lighting.h"
 #include "../radio/radio.h"
-#include "wb32_stop.h"
+#include "../../common/wb32/wb32_stop.h"
 #ifdef CONFIG_GMK70_RETAINED_SLEEP
 #    include "retained.h"
 static uint32_t retained_delay = UINT32_MAX;

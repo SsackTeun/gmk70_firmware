@@ -2,7 +2,7 @@
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
-#include "../../qmk-common/core/function_flip.h"
+#include "../../common/core/function_flip.h"
 
 struct gmk_flip_output {
     uint32_t key, previous;

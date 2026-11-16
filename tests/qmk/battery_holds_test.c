@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "battery_holds.h"
+#include "../../firmware/common/battery/battery_holds.h"
 #include <assert.h>
 #include <stdio.h>
 

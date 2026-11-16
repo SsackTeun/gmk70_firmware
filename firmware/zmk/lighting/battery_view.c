@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "../wired/virtual_keys.h"
 #include "battery_view.h"
-#include "../../qmk-common/core/indicators.h"
+#include "../../common/core/indicators.h"
 #include "../battery/battery.h"
 #include <errno.h>
 #include <string.h>

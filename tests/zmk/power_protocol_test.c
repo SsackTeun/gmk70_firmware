@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-#include "protocol.h"
+#include "../../firmware/zmk/power/protocol.h"
 #include "wired_protocol.h"
 #include <assert.h>
 #include <stdio.h>

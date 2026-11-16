@@ -2,10 +2,10 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "../../firmware/qmk-common/core/radio_protocol.h"
-#include "../../firmware/qmk-common/core/radio_tx.h"
-#include "../../firmware/qmk-common/core/selection.h"
-#include "../../firmware/qmk-common/core/indicators.h"
+#include "../../firmware/common/core/radio_protocol.h"
+#include "../../firmware/common/core/radio_tx.h"
+#include "../../firmware/common/core/selection.h"
+#include "../../firmware/common/core/indicators.h"
 
 static unsigned feed(struct gmk70_radio_parser *parser, const uint8_t *bytes, size_t count, uint32_t now, unsigned policy) {
     unsigned events = 0;

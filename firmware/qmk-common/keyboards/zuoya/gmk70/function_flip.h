@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "../../../core/function_flip.h"
+#include "../../../../common/core/function_flip.h"
 
 typedef struct {
     uint8_t keycode;

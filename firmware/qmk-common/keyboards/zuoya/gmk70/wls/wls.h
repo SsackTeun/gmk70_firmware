@@ -5,7 +5,7 @@
 #include "quantum.h"
 #include <stdbool.h>
 #include "wireless.h"
-#include "../../../../core/policy.h"
+#include "../../../../../common/core/policy.h"
 
 // Stock V13 reads C15 low for Bluetooth and C14 low for 2.4 GHz.
 // Binary evidence and the complete truth table: docs/STOCK-MODE-SWITCH.md.

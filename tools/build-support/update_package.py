@@ -20,6 +20,7 @@ def build(framework_root: Path, output: Path, profile: str) -> None:
         Path(__file__).resolve().parents[2]
         / "firmware/qmk-common/keyboards/zuoya/gmk70/update"
     )
+    common = Path(__file__).resolve().parents[2] / "firmware/common/update"
     flags = [
         flag
         for flag in shlex.split((output / "cflags.txt").read_text())
@@ -29,7 +30,7 @@ def build(framework_root: Path, output: Path, profile: str) -> None:
     objects: list[str] = []
     for name, path in (
         ("boot", source / "boot.c"),
-        ("image", source / "image.c"),
+        ("image", common / "image.c"),
         ("flash", source / "wb32_flash.c"),
         (
             "vendor_flash",

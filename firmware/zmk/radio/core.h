@@ -2,7 +2,7 @@
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
-#include "../../qmk-common/core/policy.h"
+#include "../../common/core/policy.h"
 
 enum gmk_radio_turn { GMK_RADIO_TURN_NONE, GMK_RADIO_TURN_FRAME, GMK_RADIO_TURN_BATTERY };
 /* Private queue tags: controls are contiguous for bounded ACK ownership. */

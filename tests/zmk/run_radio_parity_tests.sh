@@ -14,7 +14,7 @@ native_flags=(-std=c11 -D_XOPEN_SOURCE=700 -pthread -Wall -Wextra -Werror -O1 -g
   -DCONFIG_ZMK_USB_BOOT=0 -DCONFIG_ZMK_POINTING=1 -DCONFIG_ZMK_HID_SEPARATE_MOD_RELEASE_REPORT=0
   -include tests/zmk/function_flip_native_prelude.h -Itests/zmk/radio_mouse_stubs
   -Itests/zmk/function_flip_native_stubs -Itests/zmk/radio_endpoint_stubs
-  -Idependencies/zmk/app/include -Ifirmware/qmk-common/drivers/wireless)
+  -Idependencies/zmk/app/include -Ifirmware/common/radio)
 cc "${native_flags[@]}" -c dependencies/zmk/app/src/hid.c -o artifacts/tests/zmk/radio-mouse-native-hid.o
 cc "${native_flags[@]}" tests/zmk/radio_mouse_endpoint_test.c tests/zmk/radio_mouse_endpoint_upstream.c artifacts/tests/zmk/radio-mouse-native-hid.o \
   firmware/zmk/radio/endpoint.c firmware/zmk/radio/core.c \

@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "lighting_frame.h"
-#include "../../qmk-common/keyboards/zuoya/gmk70/battery_holds.h"
+#include "../../common/battery/battery_holds.h"
 
 struct gmk_battery_status;
 enum gmk_battery_indicator { GMK_BATTERY_LEVEL, GMK_BATTERY_CHARGING };

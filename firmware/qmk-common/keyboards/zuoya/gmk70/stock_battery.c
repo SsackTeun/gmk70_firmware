@@ -1,11 +1,11 @@
 // Copyright 2024 yangzheng20003 (@yangzheng20003)
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "stock_battery.h"
-#include "../../../core/indicators.h"
+#include "../../../../common/core/indicators.h"
 #include "stock_keycodes.h"
 #include "transactions.h"
 #include "rgb_matrix.h"
-#include "battery_holds.h"
+#include "../../../../common/battery/battery_holds.h"
 #include "module.h"
 
 enum {

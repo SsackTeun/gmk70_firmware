@@ -4,8 +4,8 @@
  * module.c/module.h (Copyright 2024 Su (@isuua)). No pairing data is erased.
  */
 #include "core.h"
-#include "../../qmk-common/core/radio_protocol.h"
-#include "../../qmk-common/core/radio_tx.h"
+#include "../../common/core/radio_protocol.h"
+#include "../../common/core/radio_tx.h"
 #include <errno.h>
 #include <string.h>
 

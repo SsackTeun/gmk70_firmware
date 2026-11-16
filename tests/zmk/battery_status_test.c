@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "battery_status.h"
-#include "image.h"
+#include "../../firmware/common/update/image.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

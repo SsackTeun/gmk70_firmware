@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "battery_status.h"
-#include "protocol.h"
+#include "../../common/update/protocol.h"
 #include <string.h>
 
 bool gmk_battery_status_packet(const uint8_t request[32]) {

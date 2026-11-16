@@ -14,7 +14,7 @@ work.mkdir(parents=True, exist_ok=True)
 entry = next(item for item in json.loads(Path(sys.argv[1]).read_text()) if item["file"].endswith("/soc.c"))
 base = shlex.split(entry["command"])
 update = root / "firmware/zmk/update"
-common = root / "firmware/qmk-common/keyboards/zuoya/gmk70/update"
+common = root / "firmware/common/update"
 for profile in ("permanent", "qualification", "relay"):
     sources = [update / name for name in ("receiver.c", "raw_hid.c", "wb32_flash.c")]
     sources += [root / "firmware/zmk/runtime/service.c", common / "image.c", common / "protocol.c"]

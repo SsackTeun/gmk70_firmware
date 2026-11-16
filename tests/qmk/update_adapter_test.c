@@ -6,7 +6,7 @@
 #include "wls/wls.h"
 #include "via.h"
 #include "update/qmk_update.h"
-#include "update/protocol.h"
+#include "../../firmware/common/update/protocol.h"
 #ifndef GMK70_VIAL_UPDATE
 #    include "update/eeprom_query.h"
 #else
@@ -882,7 +882,7 @@ static void test_vial_install(void) {
 #endif
 
 #ifdef GMK70_VIAL_TRIAL
-#    include "update/trial.h"
+#    include "../../firmware/common/update/trial.h"
 static bool         interleave_trial_begin;
 gmk_update_result_t __real_gmk_trial_process(gmk_update_t *update, gmk_trial_launch_t *launch, const uint8_t request[GMK_PACKET_SIZE], bool recovery_ready);
 gmk_update_result_t __wrap_gmk_trial_process(gmk_update_t *update, gmk_trial_launch_t *launch, const uint8_t request[GMK_PACKET_SIZE], bool recovery_ready) {

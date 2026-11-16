@@ -4,7 +4,7 @@
 #include "quantum.h"
 #include "wireless.h"
 #include "util.h"
-#include "wb32_stop.h"
+#include "../../../common/wb32/wb32_stop.h"
 
 #ifndef LPWR_UART_WAKEUP_DISABLE
 #    include "uart.h"

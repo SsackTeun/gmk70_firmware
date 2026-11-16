@@ -1,9 +1,11 @@
+# Framework-neutral sources are compiled directly by both QMK families.
+GMK70_SHARED_DIR := $(abspath $(GMK70_COMMON_DIR)/../common)
 DEBOUNCE_TYPE = sym_defer_g
 SRC += split_role.c
 SRC += stock_keycodes.c
 SRC += stock_battery.c
-SRC += battery_holds.c
-SRC += stock_power.c
+SRC += $(GMK70_SHARED_DIR)/battery/battery_holds.c
+SRC += $(GMK70_SHARED_DIR)/power/stock_power.c
 SRC += stock_lighting.c
 SRC += hardware.c
 SRC += rgb_idle.c
@@ -16,11 +18,11 @@ LDFLAGS += -Wl,--wrap=housekeeping_task -Wl,--wrap=rgb_matrix_task
 LDFLAGS += -Wl,--wrap=host_keyboard_send -Wl,--wrap=host_nkro_send
 ifeq ($(strip $(GMK70_SPLIT_UPDATE)), yes)
     OPT_DEFS += -DGMK70_SPLIT_UPDATE
-    SRC += update/image.c update/protocol.c update/wb32_flash.c update/qmk_update.c
+    SRC += $(GMK70_SHARED_DIR)/update/image.c $(GMK70_SHARED_DIR)/update/protocol.c update/wb32_flash.c update/qmk_update.c
 endif
 ifeq ($(strip $(GMK70_VIAL_TRIAL)), yes)
     OPT_DEFS += -DGMK70_VIAL_TRIAL
-    SRC += update/trial.c update/trial_boot.c update/trial_watchdog.c
+    SRC += $(GMK70_SHARED_DIR)/update/trial.c update/trial_boot.c update/trial_watchdog.c
     SRC += update/trial_peer.c
     ifeq ($(strip $(GMK70_TRIAL_RUNTIME)), yes)
         OPT_DEFS += -DGMK70_TRIAL_RUNTIME

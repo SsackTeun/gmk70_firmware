@@ -6,7 +6,7 @@
  * Exact-page erase/latch/program sequence adapted from the pinned vendor
  * WB32FQ95xx hal_efl_lld.c; see firmware/zmk/PROVENANCE.md.
  */
-#include "image.h"
+#include "../../common/update/image.h"
 #include <string.h>
 #include <zephyr/arch/cpu.h>
 #include <zephyr/sys/sys_io.h>

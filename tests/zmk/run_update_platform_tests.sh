@@ -6,7 +6,7 @@ mkdir -p artifacts/tests/zmk
 flags=(
     -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer
     -fno-pie -no-pie -Itests/zmk/update_stubs -Ifirmware/zmk/update
-    -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update
+    -Ifirmware/common/update
 )
 for profile in permanent qualification studio standalone; do
     profile_flags=()

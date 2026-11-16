@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "image.h"
+#include "../../../../../common/update/image.h"
 #include "hal.h"
 #include <string.h>
 

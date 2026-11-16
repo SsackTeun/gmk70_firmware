@@ -9,7 +9,7 @@ flags=(-std=gnu11 -O1 -g -Wall -Wextra -Werror -pthread -fno-pie -fsanitize=addr
     -DCONFIG_ZMK_RGB_UNDERGLOW_BRT_START=20 -DCONFIG_ZMK_RGB_UNDERGLOW_SPD_START=1
     -DCONFIG_ZMK_RGB_UNDERGLOW_EFF_START=0 -DCONFIG_ZMK_RGB_UNDERGLOW_ON_START=1
     -Itests/zmk/rgb_native_stubs -Itests/zmk/studio_stubs -Idependencies/zmk/app/include
-    -Ifirmware/zmk/update -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update)
+    -Ifirmware/zmk/update -Ifirmware/common/update)
 # Only pinned upstream callback parameters are exempt from the native strict warnings.
 cc "${flags[@]}" -Wno-unused-parameter \
     -DCONFIG_ZMK_RGB_UNDERGLOW_BRT_MIN=0 -DCONFIG_ZMK_RGB_UNDERGLOW_BRT_MAX=100 \
@@ -23,6 +23,6 @@ mapfile -t wraps < <(sed -n 's/.*zephyr_ld_options(\(-Wl,--wrap=[a-z_]*\)).*/\1/
 cc "${flags[@]}" -no-pie -Wl,--gc-sections "${wraps[@]}" \
     tests/zmk/rgb_native_settings_test.c firmware/zmk/lighting/rgb_settings.c \
     firmware/zmk/studio/settings_backend.c firmware/zmk/studio/settings_store.c \
-    firmware/qmk-common/keyboards/zuoya/gmk70/update/image.c .work/zmk/tests/rgb-native.o \
+    firmware/common/update/image.c .work/zmk/tests/rgb-native.o \
     -o .work/zmk/tests/rgb-native-settings
 .work/zmk/tests/rgb-native-settings "${@}"

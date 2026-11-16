@@ -9,7 +9,7 @@ for profile in normal normal-event qualification nkro nkro-qualification; do
     if [[ "$profile" == nkro* ]]; then flags+=(-DCONFIG_ZMK_HID_REPORT_TYPE_NKRO=1); fi
     cc -std=c11 -Wall -Wextra -Werror -O1 -g -fno-pie -no-pie -fsanitize=address,undefined -ffunction-sections -Wl,--gc-sections \
         "${flags[@]}" -DCONFIG_GMK70_ZMK_STUDIO_SETTINGS=1 -DCONFIG_GMK70_POWER=1 \
-        -Ifirmware/zmk/update -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update \
+        -Ifirmware/zmk/update -Ifirmware/common/update \
         -Itests/zmk/radio_kernel_stubs -Itests/zmk/radio_behavior_stubs \
         -Itests/zmk/radio_endpoint_stubs \
         tests/zmk/radio_kernel_test.c firmware/zmk/radio/core.c firmware/zmk/radio/selection.c \
@@ -22,7 +22,7 @@ native_flags=(-DCONFIG_GMK70_NATIVE_KEYMAP_TEST=1 -DCONFIG_ZMK_KEYMAP_SETTINGS_S
     -DCONFIG_ZMK_KEYMAP_LAYER_REORDERING=1 -DCONFIG_ZMK_STUDIO=1 -DCONFIG_ZMK_SPLIT=1
     -DCONFIG_ZMK_BEHAVIOR_METADATA=0 -DCONFIG_ZMK_BEHAVIOR_LOCAL_IDS_IN_BINDINGS=1 -DCONFIG_ZMK_KEYMAP_LAYER_NAME_MAX_LEN=16)
 native_includes=(-Itests/zmk/radio_native_stubs
-    -Ifirmware/zmk/update -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update
+    -Ifirmware/zmk/update -Ifirmware/common/update
     -Itests/zmk/radio_kernel_stubs -Itests/zmk/radio_behavior_stubs -Itests/zmk/radio_endpoint_stubs -Idependencies/zmk/app/include)
 native_warnings=(-std=c11 -Wall -Wextra -Werror -O1 -g -fno-pie -fsanitize=address,undefined
     -fno-sanitize-recover=all -ffunction-sections -fdata-sections)

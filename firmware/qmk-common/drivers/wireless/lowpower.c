@@ -3,7 +3,7 @@
 
 #include "quantum.h"
 #include "wireless.h"
-#include "../../core/policy.h"
+#include "../../../common/core/policy.h"
 #include "usb_main.h"
 #include "split_diagnostics.h"
 

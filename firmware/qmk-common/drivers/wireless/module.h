@@ -4,8 +4,8 @@
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
-#include "../../core/policy.h"
-#include "../../core/radio_commands.h"
+#include "../../../common/core/policy.h"
+#include "../../../common/core/radio_commands.h"
 
 // device index
 enum {

@@ -4,9 +4,9 @@
 
 #include "quantum.h"
 #include "wireless.h"
-#include "../../core/policy.h"
+#include "../../../common/core/policy.h"
 #include "split_diagnostics.h"
-#include "radio_keys.h"
+#include "../../../common/radio/radio_keys.h"
 #include "smsg.h"
 
 #ifndef WLS_INQUIRY_BAT_TIME

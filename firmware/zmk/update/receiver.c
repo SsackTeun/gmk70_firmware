@@ -8,7 +8,7 @@
 #    include "battery_status.h"
 #endif
 #if defined(CONFIG_GMK70_ZMK_PEER_TRIAL_RELAY) && !defined(CONFIG_GMK70_STAGING_QUALIFICATION)
-#    include "trial.h"
+#    include "../../common/update/trial.h"
 #    define PEER_TRIAL_RELAY
 #endif
 #include <string.h>

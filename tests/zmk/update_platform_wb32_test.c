@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
-#include "image.h"
+#include "../../firmware/common/update/image.h"
 #include <wb32_flash_lowlevel.h>
 #include <zephyr/sys/sys_io.h>
 

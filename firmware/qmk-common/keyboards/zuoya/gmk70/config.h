@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #pragma once
-#include "../../../core/board.h"
+#include "../../../../common/core/board.h"
 
 // Initialize absent/reset native settings without overriding a saved choice.
 #define NKRO_DEFAULT_ON true

@@ -110,7 +110,7 @@ class ExternalGeneratorTests(unittest.TestCase):
                     "rgb_idle.c",
                     "matrix_idle.c",
                     "pairing_hold.c",
-                    "battery_holds.c",
+                    str(PROJECT / "firmware/common/battery/battery_holds.c"),
                     "function_flip.c",
                     "function_flip_qmk.c",
                 ):

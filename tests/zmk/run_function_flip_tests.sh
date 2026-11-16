@@ -10,7 +10,7 @@ cc -std=c11 -Wall -Wextra -Werror -O1 -g -fno-pie -no-pie -fsanitize=address,und
 cc -std=c11 -Wall -Wextra -Werror -O1 -g -fno-pie -no-pie -fsanitize=address,undefined \
     -DCONFIG_GMK70_ZMK_STUDIO_SETTINGS=1 \
     -Itests/zmk/function_flip_stubs -Itests/zmk/radio_kernel_stubs \
-    -Ifirmware/zmk/update -Ifirmware/qmk-common/keyboards/zuoya/gmk70/update \
+    -Ifirmware/zmk/update -Ifirmware/common/update \
     tests/zmk/function_flip_adapter_test.c firmware/zmk/function_flip/core.c firmware/zmk/studio/bool_setting.c -o .work/zmk/tests/function-flip-adapter
 .work/zmk/tests/function-flip-adapter
 for metadata in 0 1; do

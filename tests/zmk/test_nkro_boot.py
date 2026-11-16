@@ -115,7 +115,7 @@ class NkroBootTests(unittest.TestCase):
                         "-DTEST_ADAPTER",
                         "-DCONFIG_GMK70_RADIO=1",
                         "firmware/zmk/studio/bool_setting.c",
-                        "firmware/qmk-common/drivers/wireless/radio_keys.c",
+                        "firmware/common/radio/radio_keys.c",
                         "-Wl,--wrap=zmk_hid_get_boot_report",
                         "-Wl,--wrap=zmk_hid_get_keyboard_report",
                     ]

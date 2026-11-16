@@ -2,7 +2,7 @@
 #include "nkro.h"
 #include "../studio/bool_setting.h"
 #include "../wired/wired.h"
-#include "../../qmk-common/drivers/wireless/radio_keys.h"
+#include "../../common/radio/radio_keys.h"
 #ifdef CONFIG_GMK70_RADIO
 #    include "../radio/radio.h"
 #endif
