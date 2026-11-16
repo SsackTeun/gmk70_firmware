@@ -34,6 +34,11 @@ five-minute default idle sleep. Board-specific additions and integration fixes i
   outgoing key reports; releasing or remapping a pairing key cancels pending pairing.
 - **Battery-reading validation:** stale or invalid percentages appear as unknown
   instead of being used for a low-battery warning or shutdown.
+- **USB power (VIA, Vial and ZMK):** stop the USB controller when physically
+  unplugged and restart it on cable insertion, independently of the selected
+  output. See the [USB and lighting power changes](docs/ZMK-RUNTIME-IDLE.md#cable-driven-usb-and-quiet-lighting-2026-11-16).
+- **ZMK lighting traffic:** send changed right-half lighting images promptly,
+  with bounded repair copies and a slower resynchronization for unchanged images.
 - **GMK70 controls:** readable names for board actions in Vial, and two extra
   Studio key positions for remapping knob rotation without modifying Studio.
 - **ZMK board parity:** the factory layers follow the QMK shortcuts; existing

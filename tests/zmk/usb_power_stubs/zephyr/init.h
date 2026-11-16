@@ -6,4 +6,5 @@ struct power_init_entry {
     int priority;
 };
 #define APPLICATION 3
+#define POST_KERNEL 2
 #define SYS_INIT(fn, level, priority) const struct power_init_entry power_registration = {fn, level, priority}

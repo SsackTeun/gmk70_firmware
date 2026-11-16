@@ -6,6 +6,21 @@
 #include "../../firmware/common/core/radio_tx.h"
 #include "../../firmware/common/core/selection.h"
 #include "../../firmware/common/core/indicators.h"
+#include "../../firmware/common/power/usb.h"
+
+static void physical_cable_is_independent_of_host_selection(void) {
+    struct gmk70_switch cable = {0};
+    assert(!gmk70_usb_action(&cable, true, false, UINT32_MAX - 20));
+    assert(!gmk70_usb_action(&cable, true, false, 28));
+    assert(gmk70_usb_action(&cable, true, false, 29) == 1);
+    assert(gmk70_usb_action(&cable, true, false, 30) == 1); /* Native enable failure retries. */
+    assert(!gmk70_usb_action(&cable, true, true, 31));
+    assert(!gmk70_usb_action(&cable, false, true, 32));
+    assert(!gmk70_usb_action(&cable, true, true, 40));
+    assert(!gmk70_usb_action(&cable, true, true, 100));
+    assert(!gmk70_usb_action(&cable, false, true, 101));
+    assert(gmk70_usb_action(&cable, false, true, 151) == -1);
+}
 
 static unsigned feed(struct gmk70_radio_parser *parser, const uint8_t *bytes, size_t count, uint32_t now, unsigned policy) {
     unsigned events = 0;
@@ -146,6 +161,7 @@ static void retry_owners_keep_exact_deadlines_and_finite_budgets(void) {
 }
 
 int main(void) {
+    physical_cable_is_independent_of_host_selection();
     raw_frames_cannot_inject_embedded_battery_or_ack_messages();
     timeout_and_fault_quarantine_survive_idle_polls_and_timer_wrap();
     adapter_policies_and_bounded_frame_storage_remain_explicit();

@@ -155,15 +155,37 @@ def validate_radio_linking(
     public_exports += [
         f"rgb_underglow_{name}" for name in ("set_hsb", "on", "off", "toggle")
     ]
-    for suffix in public_exports:
-        implementation = f"gmk_native_{suffix}"
-        public = f"zmk_{suffix}"
+    public_exports += [
+        f"hid_{name}"
+        for name in (
+            "keyboard_clear",
+            "consumer_clear",
+            "mouse_clear",
+            "implicit_modifiers_press",
+            "implicit_modifiers_release",
+            "press",
+            "release",
+            "get_keyboard_report",
+            "get_boot_report",
+        )
+    ]
+    public_exports.append("usb_get_conn_state")
+    native_exports = [
+        (f"zmk_{suffix}", f"gmk_native_{suffix}") for suffix in public_exports
+    ]
+    native_exports.append(
+        ("usb_hid_register_device", "gmk_native_usb_hid_register_device")
+    )
+    native_exports.append(("settings_save_one", "gmk_native_settings_save_one"))
+    for public, implementation in native_exports:
         if implementation not in symbols:
             continue
         if public not in symbols and f"__wrap_{public}" not in symbols:
             continue  # Only native same-TU users remain after section GC.
         if implementation not in _branch_targets(functions.get(public, "")):
             raise ValueError(f"Native ABI shim bypasses {implementation}")
+        if public == "usb_hid_register_device" and f"__wrap_{public}" not in symbols:
+            continue  # Standalone has no updater Feature-descriptor wrapper.
         if public not in _branch_targets(functions.get(f"__wrap_{public}", "")):
             raise ValueError(f"Radio wrapper bypasses public ABI shim {public}")
     if not any(

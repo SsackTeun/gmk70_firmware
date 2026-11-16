@@ -78,10 +78,27 @@ int main(void) {
     fake_ms = 200;
     gmk_lighting_wire_poll(NULL);
     assert(transmitted == 12 && packet[2] == 0); /* Repaint without another animation tick. */
+    for (unsigned i = 1; i < 11; ++i)
+        gmk_lighting_wire_poll(NULL);
+    fake_ms = 400;
+    for (unsigned i = 0; i < 11; ++i)
+        gmk_lighting_wire_poll(NULL);
+    assert(transmitted == 33 && !frame.pending && !frame.replays);
+    /* Repeated native callbacks with unchanged pixels must not rearm a repair
+     * burst. Even a black frame has bounded recovery after loss or peer reset. */
+    assert(!update_rgb(NULL, colors, 77));
+    for (fake_ms = 401; fake_ms < 5400; ++fake_ms)
+        gmk_lighting_wire_poll(NULL);
+    assert(transmitted == 33);
+    gmk_lighting_wire_poll(NULL);
+    assert(transmitted == 34 && packet[2] == 0);
+    for (unsigned i = 1; i < 11; ++i)
+        gmk_lighting_wire_poll(NULL);
+    unsigned before_writes = writes;
     gmk_lighting_poll();
-    assert(writes == 1); /* Central does not render the remote cache. */
+    assert(writes == before_writes); /* Central does not render the remote cache. */
     left = false;
-    assert(!update_rgb(NULL, colors, 77) && writes == 1);
+    assert(!update_rgb(NULL, colors, 77) && writes == before_writes);
     memset(&frame, 0, sizeof(frame));
     gmk_light_release(&rx);
     struct gmk_light_frame tx = {0};
@@ -92,20 +109,20 @@ int main(void) {
         gmk_light_sent(&tx, packet, true);
         if (i < 10) {
             gmk_lighting_poll();
-            assert(writes == 1);
+            assert(writes == before_writes);
         }
     }
     inject = true;
     gmk_lighting_poll();
-    assert(writes == 2 && pixel_count == 41);
+    assert(writes == before_writes + 1 && pixel_count == 41);
     for (unsigned i = 0; i < 41; ++i)
         assert(received[3 * i] == i + 36);
     gmk_lighting_poll();
-    assert(writes == 2);
+    assert(writes == before_writes + 1);
     inject = false;
     wired  = false;
     assert(!update_rgb(NULL, colors, 77));
-    assert(writes == 3 && pixel_count == 41 && received[0] == 36);
+    assert(writes == before_writes + 2 && pixel_count == 41 && received[0] == 36);
     gmk_lighting_poll();
     assert(!frame.pending && !frame.ready && !frame.receiving);
     puts("Lighting adapter: half slicing, one chunk per scan, worker-only DMA and claimed-buffer ownership passed");

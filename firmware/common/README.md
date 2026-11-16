@@ -15,6 +15,7 @@ There is no generated/copy tree, separate runtime, heap, or new worker.
 | `core/radio_protocol.h`: packet construction, checksum, streaming RX and bounded raw-tail quarantine | `drivers/wireless/module.c` | `battery/battery.c`, `radio/core.c` |
 | `core/radio_tx.h`: ACK deadlines, finite retry decisions and task-phase helper | module task and native SMSG queue | radio service worker |
 | `core/selection.h`: physical-selector debounce | `wls/wls.c` | `radio/selection.c` |
+| `power/usb.h`: debounced physical-cable policy | native ChibiOS USB adapter | native Zephyr USB adapter |
 | `core/hold.h`: source-position ownership and hold deadline | pairing adapter | radio selector |
 | `core/function_flip.h`: stock HID mappings and held/release state | native QMK keycode converter | native ZMK HID converter |
 | `core/indicators.h`: battery segments, charging/radio colors, radio LED selection and blink phase | stock battery and radio indicators | battery view and controls |
@@ -61,6 +62,12 @@ settings storage and RTOS suspend/resume are not replaced by common substitutes.
 The shared STOP primitive still needs each owner to manage wake sources,
 clocks, timers and framework state. Brief runtime STOP remains unqualified;
 this refactor does not enable it or change radio firmware.
+
+The [cable-driven USB change](../../docs/ZMK-RUNTIME-IDLE.md#cable-driven-usb-and-quiet-lighting-2026-11-16)
+uses the existing selector debounce with caller-owned state. Framework adapters
+perform native controller shutdown/restart and external pull-up sequencing.
+Clock configuration, radio worker scheduling, charger cadence, query/freshness
+limits and resident/settings formats retain their existing policies.
 
 ## Verification
 

@@ -3,6 +3,7 @@ set -euo pipefail
 source "$(dirname "$0")/project.sh"
 bash tests/qmk/run_matrix_idle_tests.sh
 bash tests/qmk/run_rgb_idle_tests.sh
+bash tests/qmk/run_usb_power_tests.sh
 mkdir -p artifacts/tests/qmk
 common_flags=(
     -std=gnu11 -O1 -g -Wall -Wextra -Werror -Wno-unused-parameter

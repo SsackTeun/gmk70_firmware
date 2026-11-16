@@ -9,6 +9,8 @@ SRC += $(GMK70_SHARED_DIR)/power/stock_power.c
 SRC += stock_lighting.c
 SRC += hardware.c
 SRC += rgb_idle.c
+SRC += usb_power.c
+LDFLAGS += -Wl,--wrap=init_usb_driver
 LDFLAGS += -Wl,--wrap=ws2812_init -Wl,--wrap=ws2812_flush
 SRC += matrix_idle.c pairing_hold.c
 LDFLAGS += -Wl,--wrap=matrix_scan -Wl,--wrap=matrix_init

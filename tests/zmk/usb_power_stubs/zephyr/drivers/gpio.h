@@ -10,6 +10,7 @@
 #define GPIO_OUTPUT_INIT_LOW BIT(18)
 #define GPIO_OUTPUT_INIT_HIGH BIT(19)
 #define GPIO_OUTPUT_LOW (GPIO_OUTPUT | GPIO_OUTPUT_INIT_LOW)
+#define GPIO_OUTPUT_HIGH (GPIO_OUTPUT | GPIO_OUTPUT_INIT_HIGH)
 typedef unsigned gpio_pin_t;
 typedef uint32_t gpio_flags_t;
 typedef uint32_t gpio_port_value_t;
@@ -44,4 +45,12 @@ struct gpio_driver_api {
 /* Native API dispatch boundary; the callback is the actual WB32 driver. */
 static inline int gpio_pin_configure(const struct device *dev, gpio_pin_t pin, gpio_flags_t flags) {
     return ((const struct gpio_driver_api *)dev->api)->pin_configure(dev, pin, flags);
+}
+static inline int gpio_pin_get_raw(const struct device *dev, gpio_pin_t pin) {
+    gpio_port_value_t value;
+    int               result = ((const struct gpio_driver_api *)dev->api)->port_get_raw(dev, &value);
+    return result ? result : (int)((value >> pin) & 1U);
+}
+static inline int gpio_pin_set_raw(const struct device *dev, gpio_pin_t pin, int value) {
+    return ((const struct gpio_driver_api *)dev->api)->port_set_masked_raw(dev, BIT(pin), value ? BIT(pin) : 0);
 }

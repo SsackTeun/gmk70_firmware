@@ -15,6 +15,7 @@ static uint32_t     now;
 static unsigned     power, power_writes, flushes, native_calls;
 static unsigned     housekeeping_calls;
 static unsigned     rgb_idle_calls;
+void                gmk70_usb_power_poll(void) {}
 void                gmk70_rgb_idle_poll(bool allow_flush) {
     assert(allow_flush == (state == LPWR_NORMAL && !suspended));
     ++rgb_idle_calls;

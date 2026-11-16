@@ -31,7 +31,9 @@ void wb32_usb_clock_enable(void) {
 void wb32_usb_disconnect(void) {
     ++disconnects;
 }
-void wb32_usb_clock_disable(void) {}
+void wb32_usb_clock_disable(void) {
+    wb32_usb_disconnect();
+}
 
 uint8_t sys_read8(uintptr_t address) {
     unsigned offset = address - 0x40014000UL;
@@ -407,13 +409,19 @@ static void detach_during_wake(void) {
     assert(usb_dc_detach() == 0);
 }
 
+static void reattach_during_wake(void) {
+    assert(usb_dc_detach() == 0);
+    assert(usb_dc_attach() == 0);
+    assert(usb_wakeup_request() == -EACCES);
+}
+
 static void reset_during_wake(void) {
     usb_event(4);
 }
 
 /* Host resume, reset or unplug while waiting must cancel the pending pulse. */
 static void test_remote_wake_rechecks_after_suspend_idle_delay(void) {
-    void (*interruptions[])(void) = {host_resume_during_wake, detach_during_wake, reset_during_wake};
+    void (*interruptions[])(void) = {host_resume_during_wake, detach_during_wake, reattach_during_wake, reset_during_wake};
     for (unsigned i = 0; i < sizeof(interruptions) / sizeof(interruptions[0]); ++i) {
         start();
         authorize_remote_wake();

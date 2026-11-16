@@ -299,15 +299,6 @@ void keyboard_post_init_kb(void) {
     gpio_set_pin_input_high(HS_2G4_DEF_PIN);
 #endif
 
-#ifdef USB_POWER_EN_PIN
-    gpio_write_pin_low(USB_POWER_EN_PIN);
-    gpio_set_pin_output(USB_POWER_EN_PIN);
-#endif
-
-#ifdef HS_BAT_CABLE_PIN
-    gpio_set_pin_input(HS_BAT_CABLE_PIN);
-#endif
-
 #ifdef BAT_FULL_PIN
     gpio_set_pin_input_high(BAT_FULL_PIN);
 #endif
@@ -336,7 +327,7 @@ void keyboard_post_init_kb(void) {
 
 void usb_power_connect(void) {
 #    ifdef USB_POWER_EN_PIN
-    gpio_write_pin_low(USB_POWER_EN_PIN);
+    gpio_write_pin(USB_POWER_EN_PIN, !gpio_read_pin(HS_BAT_CABLE_PIN));
 #    endif
 }
 

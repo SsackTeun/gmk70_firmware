@@ -336,17 +336,13 @@ int usb_dc_detach(void) {
         reg_write(INTRUSBE, 0);
         reg_write(INTRINE, 0);
         reg_write(INTROUTE, 0);
-        wb32_usb_disconnect();
+        /* This already disconnects D+ before gating the controller clocks. */
         wb32_usb_clock_disable();
-        attached          = false;
-        remote_authorized = false;
-        suspended = wake_active = false;
-        ++wake_epoch;
+        attached = false;
         reset_control();
-        for (unsigned int dir = 0; dir < 2; ++dir) {
-            for (unsigned int number = 0; number < WB32_EP_COUNT; ++number)
-                endpoints[dir][number].enabled = false;
-        }
+        /* Endpoint I/O and remote wake reject detached access. Reattach's
+         * reset_controller restores all endpoint/wake state and advances the
+         * epoch before IRQs resume; no duplicate per-endpoint reset is needed. */
     }
     irq_unlock(key);
     if (was_attached) notify_status(USB_DC_DISCONNECTED);

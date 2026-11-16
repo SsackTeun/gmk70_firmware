@@ -3,6 +3,8 @@ set -euo pipefail
 source "$(dirname "$0")/../../scripts/project.sh"
 ulimit -c 0
 mkdir -p .work/zmk/tests
+uv run --no-sync --project tools/build-support python tests/zmk/usb_power_native.py \
+    .work/zmk/tests/native_usb_power.h
 flags=(-Wall -Wextra -Werror -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer)
 for profile in legacy wired; do
     wired=0
@@ -19,7 +21,8 @@ for profile in legacy wired; do
         objects+=("$obj")
     done < "$manifest"
     c++ -std=c++20 "${flags[@]}" -DEXPECT_WIRED="$wired" \
-        -Itests/zmk/usb_power_stubs -Idependencies/zephyr/include \
+        -Itests/zmk/usb_power_stubs -I.work/zmk/tests -Idependencies/zephyr/include \
         tests/zmk/usb_power_test.cpp "${objects[@]}" -o ".work/zmk/tests/usb-power-$profile"
     ".work/zmk/tests/usb-power-$profile"
+    ".work/zmk/tests/usb-power-$profile" connected-boot
 done

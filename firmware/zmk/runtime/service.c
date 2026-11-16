@@ -34,6 +34,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/reboot.h>
 #include <zmk/usb.h>
+#include "../drivers/usb/device/usb_power_gmk70.h"
 
 /* APPLICATION init publishes success before Zephyr starts static threads. */
 static bool service_ready;
@@ -85,7 +86,13 @@ static void worker(void *a, void *b, void *c) {
         /* Never enqueue this worker behind the responder/scanner mutex.
          * Contention means unknown peer state, represented by a cleared flag;
          * do not reuse an earlier connected indication indefinitely. */
-        bool                  peer           = gmk_wired_try_get_stats(&stats) && stats.peer;
+        bool peer = gmk_wired_try_get_stats(&stats) && stats.peer;
+#ifdef CONFIG_GMK70_POWER
+        if (!gmk_power_sleep_pending()) gmk_usb_power_poll();
+#else
+        gmk_usb_power_poll();
+#endif
+        /* Observe native USB state after any cable-driven disconnect. */
         gmk_zmk_service_env_t env            = worker_environment(peer);
         bool                  runtime_writes = env.left && env.writes_ready && env.wired && env.usb_configured;
 #ifdef CONFIG_GMK70_POWER

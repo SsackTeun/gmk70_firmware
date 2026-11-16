@@ -59,6 +59,7 @@ static void frame_roundtrip(void) {
     gmk_light_release(&rx);
     /* No stale state survives mode changes, and sequence wrap is harmless. */
     for (unsigned f = 0; f < 260; ++f) {
+        rgb[0] ^= 1;
         assert(gmk_light_queue(&tx, rgb));
         for (unsigned i = 0; i < 11; ++i) {
             assert(gmk_light_next(&tx, next));
@@ -107,6 +108,13 @@ static void latest_wins(void) {
     assert(!gmk_light_refresh(&tx));
 }
 int main(void) {
+    struct gmk_light_frame unchanged                 = {0};
+    uint8_t                dark[3 * GMK_LIGHT_RIGHT] = {0};
+    assert(gmk_light_queue(&unchanged, dark) && unchanged.replays == 2);
+    uint8_t sequence = unchanged.sequence;
+    assert(!gmk_light_queue(&unchanged, dark) && unchanged.sequence == sequence);
+    gmk_light_reset(&unchanged);
+    assert(gmk_light_queue(&unchanged, dark)); /* Reconnect must resend black. */
     frame_roundtrip();
     latest_wins();
     puts("Lighting frames: full-frame commit, CRC, loss, reordering, busy ownership and sequence wrap passed");

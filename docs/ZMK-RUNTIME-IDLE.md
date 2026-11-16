@@ -145,3 +145,89 @@ held-key and first-key delivery. The full-sleep RTC's coarse hourly alarm is
 not a general runtime deadline scheduler. The ZMK updater's full application slot
 is another constraint; it must not be silently exceeded or solved
 by changing the resident/settings layout.
+
+## Cable-driven USB and quiet lighting (2026-11-16)
+
+This change adds only physical-cable USB lifecycle handling in VIA/QMK,
+Vial/QMK and ZMK, and change-driven right-half lighting delivery in ZMK.
+Applications retain their 96 MHz clock configuration. The native VIA/Vial
+100 kHz periodic kernel tick and polling radio worker, one-second charger
+maintenance, three-second wireless battery queries and ten-second freshness
+limit retain their existing behavior. No brief runtime STOP, radio firmware,
+watchdog, settings format, partition or stack-reservation change is included.
+
+### Physical cable controls native USB lifecycle
+
+The shared `firmware/common/power/usb.h` policy debounces A7 for 50 ms using
+the existing selector helper. Cable presence is independent of the mode slider
+and logical output. With a cable connected, USB remains available in Bluetooth
+and dongle modes, subject to the existing maintenance/write gates. Unplugging
+removes the B1 external D+ pull-up and stops the controller. Cable bounce does
+not repeatedly restart it; a failed native enable remains retryable.
+
+ZMK configures B1 high before application initialization. Native ZMK still
+initializes its USB core/controller once at startup. After initialization,
+the existing service worker parks the controller if unplugged, or enables the
+external pull-up once cable presence is stable. Subsequent transitions use
+native `usb_dc_detach`/`usb_dc_attach`. The pinned core's DISCONNECTED callback
+cancels pending transfers, disables class endpoints and notifies classes and
+ZMK. Core descriptors and EP0 callbacks survive controller reattachment;
+USB transfer work objects are not reinitialized on each cable cycle. The driver
+rejects detached endpoint I/O and remote wake; reattachment resets endpoint and
+wake state before enabling interrupts. Clock shutdown already disconnects D+,
+so detach does not repeat that operation.
+VIA/Vial configure the cable and pull-up pins before native USB initialization,
+initialize endpoint queues once,
+stop via ChibiOS and call QMK's native `restart_usb_driver` on insertion. Later
+board initialization does not overwrite the adapter's pull-up state.
+
+No additional worker or timer is reserved, and USB polling is excluded during
+committed full sleep. The native WB32 detach paths gate USB peripheral/FIFO
+clocks. A separate analog PHY power-down value is not documented in the
+available reference manual, so this change does not guess one or establish
+complete analog power removal.
+
+### Changed lighting frames with bounded recovery
+
+ZMK queues a changed right-side image promptly, including black. It follows
+with two repair frames spaced 200 ms apart, then resynchronizes unchanged
+images every five seconds. Identical upstream callbacks do not restart the
+repair budget. A detected disconnect invalidates the cache, including black;
+periodic resynchronization repairs lost frames or an undetected peer reboot.
+Existing CRC checks, complete-frame buffer ownership, animation changes,
+local rail settling and held battery-indicator repaint remain intact.
+
+One full image still contains 11 chunks, sent one per scan after the matrix
+response. After repair, unchanged images schedule approximately 2.2 chunks per
+second instead of 55. This is a reduction in scheduled frame traffic, not a
+current measurement. QMK's native split RGB state synchronization retains its
+existing behavior.
+
+### Verification and hardware limits
+
+Load `scripts/project.sh`, run `make test test-zmk check-tools`, and build all
+affected native variants with pinned xPack GCC 14.2.1. The USB fixtures exercise
+the actual maintained cable policy, pinned Zephyr disconnect/endpoint handling,
+native API boundaries, GPIO/controller implementations, unplugged clock/MMIO
+exclusion after startup, debounce, repeated reconnection, retained EP0 callbacks,
+timer wrap and full-sleep exclusion. Both adapters test connected and unplugged
+startup; the shared policy tests failed-operation retry. Lighting fixtures
+exercise unchanged black, bounded repair/resynchronization,
+CRC/loss/reordering, sequence wrap, claimed buffer ownership and battery overlays
+on both roles. Remote-wake tests also detach and reattach during a pending pulse.
+
+The ZMK updater uses 106,456 of 106,496 flash bytes and 28,020 of 28,544 RAM
+bytes. Standalone uses 101,232 of 114,688 flash bytes and 27,172 of 28,544 RAM
+bytes. Stack reservations and partitions are unchanged. To fit the updater,
+native HID, USB and settings implementations share whole-program optimization
+behind separate public ABI forwarding functions. Their algorithms and write
+admission wrappers are unchanged. Linked-image checks verify forwarding to the
+native implementations and through each applicable wrapper; native HID tests
+compare the original and optimized paths across modifier, clear, function/media,
+NKRO and boot-report cases.
+
+Native USB core lifecycle beyond the fixture boundary mocks, physical clock
+waveforms and current/endurance still require hardware qualification. The radio
+may return a cached percentage in a fresh reply; these changes do not repair
+that separate freeze or use percentages as evidence of power savings. No
+physical device operations or release publication are part of this change.

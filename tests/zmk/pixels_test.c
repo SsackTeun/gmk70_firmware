@@ -464,6 +464,9 @@ bool __wrap_gmk_protocol_lighting(const struct gmk_wire_io *io, const uint8_t pa
 }
 static void collect_peer_frame(uint8_t packets[GMK_LIGHT_CHUNKS][16]) {
     peer_packets_count = 0;
+    /* Charging can change only LEFT. An identical RIGHT image is quiet until
+     * its bounded repair/resync, rather than queuing another upstream copy. */
+    if (!frame.pending) now_ms += frame.replays ? GMK_LIGHT_REPAIR_MS : GMK_LIGHT_QUIET_MS;
     for (unsigned i = 0; i < GMK_LIGHT_CHUNKS; ++i)
         gmk_lighting_wire_poll(NULL);
     assert(peer_packets_count == GMK_LIGHT_CHUNKS);

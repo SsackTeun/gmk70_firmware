@@ -21,10 +21,10 @@ for relative in ("gpio/gpio_wb32.c", "usb/device/usb_dc_wb32.c", "usb/device/usb
     command = base.copy()
     command[command.index("-o") + 1] = str(obj)
     command[command.index("-c") + 1] = str(source)
-    command.append("-Werror")
+    command.extend(["-Werror", "-fno-lto"])
     subprocess.run(command, cwd=entry["directory"], check=True)
     if source.stem == "usb_power_gmk70":
         sections = subprocess.check_output(["readelf", "-SW", str(obj)], text=True)
-        assert ".z_init_APPLICATION89_0_" in sections, sections
-print("Real pinned Zephyr headers: GPIO/USB/B1 initializer ARM objects and APPLICATION 89 registration passed")
+        assert ".z_init_POST_KERNEL88_0_" in sections, sections
+print("Real pinned Zephyr headers: GPIO/USB/B1 initializer ARM objects and POST_KERNEL 88 registration passed")
 PY

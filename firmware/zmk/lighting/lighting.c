@@ -120,8 +120,8 @@ static void battery_refresh(void) {
     /* A successful DMA transfer does not acknowledge reception by the LEDs.
      * Keep held indicators alive at the native animation cadence, including
      * while upstream RGB is off. One early frame after rail restoration must
-     * not leave LEFT dark until another key/status change; peer frames already
-     * have periodic replay. Releasing the last hold stops this local replay. */
+     * not leave LEFT dark until another key/status change. RIGHT uses bounded
+     * repair frames and a quiet resync interval. Releasing stops local replay. */
     if (display_dirty || (gmk_battery_view_active(&battery_view) && (displayed_status != status_key(&status) || (uint32_t)(k_uptime_get_32() - displayed_at) >= 50U))) render_battery_locked(&status);
     k_mutex_unlock(&render_lock);
 }
@@ -184,8 +184,9 @@ uint32_t gmk_lighting_scan_delay(void) {
     if (frame.ready || frame.pending)
         delay = 1;
     else if (gmk_wired_is_left() && frame.cached && gmk_split_available()) {
-        uint32_t elapsed = k_uptime_get_32() - last_frame;
-        delay            = elapsed >= 200 ? 1 : 200 - elapsed;
+        uint32_t elapsed  = k_uptime_get_32() - last_frame;
+        uint32_t interval = frame.replays ? GMK_LIGHT_REPAIR_MS : GMK_LIGHT_QUIET_MS;
+        delay             = elapsed >= interval ? 1 : interval - elapsed;
     }
     k_spin_unlock(&frame_lock, key);
     if (gmk_wired_is_left() && gmk_battery_view_active(&battery_view) && delay > 50) delay = 50;
@@ -210,9 +211,10 @@ void gmk_lighting_wire_poll(const struct gmk_wire_io *io) {
         return;
     }
 #endif
-    /* Off submits exactly one upstream frame. Periodic replay also repairs
-     * lost chunks and repaints a peripheral that rebooted independently. */
-    if ((uint32_t)(k_uptime_get_32() - last_frame) >= 200) gmk_light_refresh(&frame);
+    /* Send changes immediately, repair twice at 200 ms, then resynchronize
+     * every five seconds. Unchanged black frames need no animation cadence. */
+    uint32_t interval = frame.replays ? GMK_LIGHT_REPAIR_MS : GMK_LIGHT_QUIET_MS;
+    if ((uint32_t)(k_uptime_get_32() - last_frame) >= interval) gmk_light_refresh(&frame);
     bool pending = gmk_light_next(&frame, packet);
     k_spin_unlock(&frame_lock, key);
     if (!pending) return;

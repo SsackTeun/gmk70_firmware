@@ -30,11 +30,17 @@ if(CONFIG_BOARD_GMK70_WIRED)
     # Defer board inlining until the full program is visible, and prefer
     # callee-save registers over repeated call-site spills in this small image.
     zephyr_library_compile_options(-fno-early-inlining)
-    zephyr_compile_options(-fipa-pta -fno-caller-saves -fno-early-inlining)
+    # Avoid switch tables and partial-inline copies in the fixed updater slot.
+    zephyr_compile_options(-fipa-pta -fno-caller-saves -fno-early-inlining
+      -fno-jump-tables -fno-tree-switch-conversion -fno-partial-inlining)
     # Retain native/public --wrap boundaries outside LTO below. Within the
     # remaining closed units, GCC may specialize internal parameters; this
     # keeps bounded radio reconnect inside the unchanged updater slot.
     zephyr_ld_options(-flto-partition=one -fipa-sra)
+    zephyr_library_sources(runtime/native_hid.c runtime/native_usb.c)
+    if(CONFIG_GMK70_ZMK_STUDIO_SETTINGS)
+      zephyr_library_sources(runtime/native_settings.c)
+    endif()
     if(CONFIG_GMK70_RADIO)
       zephyr_library_sources(runtime/native_endpoints.c)
     endif()
@@ -48,7 +54,7 @@ if(CONFIG_BOARD_GMK70_WIRED)
       zephyr_library_sources(runtime/native_rgb.c)
     endif()
     # The updater's fixed application slot must also fit event-driven idle.
-    # Wrapped native definitions MUST stay outside LTO: even noipa cannot
+    # Wrapped public definitions MUST stay outside LTO: even noipa cannot
     # preserve GNU --wrap when LTO binds a call to its original definition.
     # Maintained board owners share optimization; linked image checks retain
     # explicit native initialization, clock, storage and routing boundaries.
@@ -95,14 +101,29 @@ if(CONFIG_BOARD_GMK70_WIRED)
                     zmk_rgb_underglow_on=gmk_native_rgb_underglow_on
                     zmk_rgb_underglow_off=gmk_native_rgb_underglow_off
                     zmk_rgb_underglow_toggle=gmk_native_rgb_underglow_toggle)
-                elseif(gmk_source MATCHES "/(hid|keymap|endpoints|rgb_underglow|pm|usb|settings|main)\\.c$"
+                elseif(gmk_source MATCHES "/hid\\.c$")
+                  set_property(SOURCE "${gmk_source}" TARGET_DIRECTORY app APPEND PROPERTY COMPILE_DEFINITIONS
+                    zmk_hid_keyboard_clear=gmk_native_hid_keyboard_clear
+                    zmk_hid_consumer_clear=gmk_native_hid_consumer_clear
+                    zmk_hid_mouse_clear=gmk_native_hid_mouse_clear
+                    zmk_hid_implicit_modifiers_press=gmk_native_hid_implicit_modifiers_press
+                    zmk_hid_implicit_modifiers_release=gmk_native_hid_implicit_modifiers_release
+                    zmk_hid_press=gmk_native_hid_press
+                    zmk_hid_release=gmk_native_hid_release
+                    zmk_hid_get_keyboard_report=gmk_native_hid_get_keyboard_report
+                    zmk_hid_get_boot_report=gmk_native_hid_get_boot_report)
+                elseif(gmk_source MATCHES "/usb\\.c$")
+                  set_property(SOURCE "${gmk_source}" TARGET_DIRECTORY app APPEND PROPERTY COMPILE_DEFINITIONS
+                    zmk_usb_get_conn_state=gmk_native_usb_get_conn_state)
+                elseif(gmk_source MATCHES "/(keymap|endpoints|rgb_underglow|pm|settings|main)\\.c$"
                     OR gmk_source MATCHES "/events/(position_state_changed|keycode_state_changed|activity_state_changed)\\.c$"
                     OR gmk_source MATCHES "/studio/core\\.c$")
                   set(gmk_boundary ON)
                 endif()
               elseif(gmk_library STREQUAL "subsys__usb__device__class__hid")
-                set(gmk_boundary ON)
-              elseif(NOT gmk_source MATCHES "/(event_link|wired_protocol|wired_wb32|encoder|encoder_native|split|raw_hid|studio_feature|nkro|flip|lighting|lighting_frame|wb32_pixels|image|radio|battery|battery_sensor|battery_view|bool_setting|settings|settings_store|settings_backend|receiver|service|storage|idle|retained|retained_clock|rgb_settings|endpoint|radio_keys|battery_holds|stock_power|battery_status|kscan_gmk70_wired|power|platform|wb32_flash|native_update_wire|usb_dc_wb32|gpio_wb32|behavior|bindings|metadata|control|controls|selection|protocol|coordinator|core)\\.c$"
+                set_property(SOURCE "${gmk_source}" TARGET_DIRECTORY ${gmk_library} APPEND PROPERTY COMPILE_DEFINITIONS
+                  usb_hid_register_device=gmk_native_usb_hid_register_device)
+              elseif(NOT gmk_source MATCHES "/(event_link|wired_protocol|wired_wb32|encoder|encoder_native|split|raw_hid|studio_feature|nkro|flip|lighting|lighting_frame|wb32_pixels|image|radio|battery|battery_sensor|battery_view|bool_setting|settings|settings_store|settings_backend|receiver|service|storage|idle|retained|retained_clock|rgb_settings|endpoint|radio_keys|battery_holds|stock_power|battery_status|kscan_gmk70_wired|power|platform|wb32_flash|native_update_wire|usb_dc_wb32|usb_power_gmk70|gpio_wb32|behavior|bindings|metadata|control|controls|selection|protocol|coordinator|core)\\.c$"
                   OR gmk_source MATCHES "/recovery/startup\\.c$")
                 set(gmk_boundary ON)
               endif()
@@ -113,8 +134,16 @@ if(CONFIG_BOARD_GMK70_WIRED)
           endforeach()
         endif()
       endforeach()
-      set_property(SOURCE "${ZEPHYR_BASE}/lib/os/reboot.c" "${ZEPHYR_BASE}/subsys/settings/src/settings_store.c"
+      set_property(SOURCE "${ZEPHYR_BASE}/lib/os/reboot.c"
         TARGET_DIRECTORY zephyr APPEND PROPERTY COMPILE_OPTIONS -fno-lto)
+      if(CONFIG_GMK70_ZMK_STUDIO_SETTINGS)
+        set_property(SOURCE "${ZEPHYR_BASE}/subsys/settings/src/settings_store.c"
+          TARGET_DIRECTORY zephyr APPEND PROPERTY COMPILE_DEFINITIONS
+          settings_save_one=gmk_native_settings_save_one)
+      else()
+        set_property(SOURCE "${ZEPHYR_BASE}/subsys/settings/src/settings_store.c"
+          TARGET_DIRECTORY zephyr APPEND PROPERTY COMPILE_OPTIONS -fno-lto)
+      endif()
       if(CONFIG_GMK70_ZMK_STUDIO_SETTINGS)
         set_property(SOURCE "${ZEPHYR_BASE}/lib/crc/crc32_sw.c"
           TARGET_DIRECTORY zephyr APPEND PROPERTY COMPILE_OPTIONS -fno-lto)

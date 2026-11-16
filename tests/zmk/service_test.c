@@ -8,7 +8,11 @@
 static jmp_buf  leave_worker;
 static unsigned feeds, steps, reset_calls, early_calls, raw_polls;
 static unsigned handoff_calls;
-bool            gmk_zmk_resident_handoff(void) {
+static unsigned usb_power_polls;
+void            gmk_usb_power_poll(void) {
+    ++usb_power_polls;
+}
+bool gmk_zmk_resident_handoff(void) {
     ++handoff_calls;
     return false;
 }
@@ -152,10 +156,12 @@ int main(void) {
     test_storage = false;
     if (!setjmp(leave_worker)) worker(NULL, NULL, NULL);
     assert(!runtime_allowed);
-    test_storage = true;
-    test_sleep   = true;
+    test_storage                    = true;
+    test_sleep                      = true;
+    unsigned before_sleep_usb_polls = usb_power_polls;
     if (!setjmp(leave_worker)) worker(NULL, NULL, NULL);
     assert(!runtime_allowed && !observed.writes_ready);
+    assert(usb_power_polls == before_sleep_usb_polls);
     test_sleep = false;
     test_left  = false;
     if (!setjmp(leave_worker)) worker(NULL, NULL, NULL);

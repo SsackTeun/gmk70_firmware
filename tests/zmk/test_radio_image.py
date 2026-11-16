@@ -100,9 +100,19 @@ class RadioImageTests(unittest.TestCase):
             )
 
     def test_native_abi_shims_require_both_real_forwarding_hops(self) -> None:
-        for suffix in ("endpoint_send_report", "keymap_add_layer"):
-            implementation = f"gmk_native_{suffix}"
-            public = f"zmk_{suffix}"
+        for public, implementation in (
+            ("zmk_endpoint_send_report", "gmk_native_endpoint_send_report"),
+            ("zmk_keymap_add_layer", "gmk_native_keymap_add_layer"),
+            ("zmk_hid_press", "gmk_native_hid_press"),
+            (
+                "zmk_hid_implicit_modifiers_press",
+                "gmk_native_hid_implicit_modifiers_press",
+            ),
+            ("zmk_hid_get_keyboard_report", "gmk_native_hid_get_keyboard_report"),
+            ("zmk_usb_get_conn_state", "gmk_native_usb_get_conn_state"),
+            ("usb_hid_register_device", "gmk_native_usb_hid_register_device"),
+            ("settings_save_one", "gmk_native_settings_save_one"),
+        ):
             assembly = (
                 ASSEMBLY
                 + f"""08003000 <{public}>:
@@ -122,7 +132,7 @@ class RadioImageTests(unittest.TestCase):
                 f"bl 8003000 <{public}>",
             ):
                 with (
-                    self.subTest(suffix=suffix, branch=branch),
+                    self.subTest(public=public, branch=branch),
                     self.assertRaises(ValueError),
                 ):
                     check_image.validate_radio_linking(
@@ -130,6 +140,29 @@ class RadioImageTests(unittest.TestCase):
                         assembly.replace(branch, "bx lr"),
                         "wired-studio-updater",
                     )
+
+    def test_standalone_native_usb_registration_keeps_its_forwarding_hop(self) -> None:
+        assembly = (
+            ASSEMBLY
+            + """08003000 <usb_hid_register_device>:
+ 8003000: f000 b800 b.w 8003200 <gmk_native_usb_hid_register_device>
+08003200 <gmk_native_usb_hid_register_device>:
+ 8003200: 4770 bx lr
+"""
+        )
+        symbols = set(RADIO_SYMBOLS) | {
+            "usb_hid_register_device",
+            "gmk_native_usb_hid_register_device",
+        }
+        check_image.validate_radio_linking(symbols, assembly, "wired-studio-standalone")
+        with self.assertRaises(ValueError):
+            check_image.validate_radio_linking(
+                symbols,
+                assembly.replace(
+                    "b.w 8003200 <gmk_native_usb_hid_register_device>", "bx lr"
+                ),
+                "wired-studio-standalone",
+            )
 
     def test_marker_requires_exact_explicit_profile_even_without_radio_poll(
         self,

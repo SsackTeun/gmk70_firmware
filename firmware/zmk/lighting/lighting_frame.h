@@ -8,13 +8,14 @@
 #define GMK_LIGHT_RIGHT GMK70_LED_RIGHT
 #define GMK_LIGHT_PIXELS (GMK_LIGHT_LEFT + GMK_LIGHT_RIGHT)
 #define GMK_LIGHT_CHUNKS 11U
+enum { GMK_LIGHT_REPAIR_MS = 200, GMK_LIGHT_QUIET_MS = 5000 };
 
 /* One bounded buffer per physical half. Caller serializes all accesses and
  * retains a claim through hardware encoding, outside the wire/IRQ lock. */
 struct gmk_light_frame {
     uint8_t  rgb[3 * GMK_LIGHT_RIGHT];
     uint16_t mask;
-    uint8_t  sequence, chunk;
+    uint8_t  sequence, chunk, replays;
     bool     pending, receiving, ready, busy, cached;
 };
 bool gmk_light_queue(struct gmk_light_frame *, const uint8_t rgb[3 * GMK_LIGHT_RIGHT]);

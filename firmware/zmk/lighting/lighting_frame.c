@@ -7,12 +7,13 @@
 #define COMPLETE ((1U << GMK_LIGHT_CHUNKS) - 1U)
 
 bool gmk_light_queue(struct gmk_light_frame *f, const uint8_t rgb[3 * GMK_LIGHT_RIGHT]) {
-    if (f->busy) return false;
+    if (f->busy || (f->cached && !memcmp(f->rgb, rgb, sizeof(f->rgb)))) return false;
     memcpy(f->rgb, rgb, sizeof(f->rgb));
     ++f->sequence;
     f->chunk   = 0;
     f->pending = true;
     f->cached  = true;
+    f->replays = 2;
     return true;
 }
 bool gmk_light_refresh(struct gmk_light_frame *f) {
@@ -20,6 +21,7 @@ bool gmk_light_refresh(struct gmk_light_frame *f) {
     ++f->sequence;
     f->chunk   = 0;
     f->pending = true;
+    if (f->replays) --f->replays;
     return true;
 }
 bool gmk_light_next(const struct gmk_light_frame *f, uint8_t packet[16]) {

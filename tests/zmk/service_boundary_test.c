@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "receiver.h"
+void gmk_usb_power_poll(void) {}
 #include "wired.h"
 #include <assert.h>
 #include <setjmp.h>
