@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include <assert.h>
+#include "../../firmware/qmk-common/core/selection.h"
 #include <stdio.h>
 #include <string.h>
 #include "quantum.h"
@@ -217,6 +218,14 @@ static void test_slider(void) {
     advance(50);
     assert(scan() && current == DEVS_USB);
 }
+static void test_invalid_startup(void) {
+    mode = hs_invalid;
+    key(KC_BT1, 0, 1, true);
+    assert(!scan());
+    advance(3000);
+    assert(pairs == 0 && current == DEVS_BT1);
+}
+
 static void test_slider_bounce(void) {
     (void)scan();
     advance(50);
@@ -271,7 +280,7 @@ int main(int argc, char **argv) {
         const char *name;
         void (*run)(void);
     } tests[] = {
-        {"duplicate", test_duplicate}, {"remapped-release", test_remapped_release}, {"single-write", test_single_write}, {"buffer-write", test_buffer_write}, {"reset", test_reset}, {"timing", test_timing}, {"replacement", test_replacement}, {"mode-gate", test_mode_gate}, {"cross-mode", test_cross_mode}, {"slider", test_slider}, {"slider-bounce", test_slider_bounce}, {"slider-wrap", test_slider_wrap}, {"usb", test_usb}, {"synthetic", test_synthetic}, {"vial-authorization", test_vial_authorization},
+        {"duplicate", test_duplicate}, {"remapped-release", test_remapped_release}, {"single-write", test_single_write}, {"buffer-write", test_buffer_write}, {"reset", test_reset}, {"timing", test_timing}, {"replacement", test_replacement}, {"mode-gate", test_mode_gate}, {"cross-mode", test_cross_mode}, {"slider", test_slider}, {"slider-bounce", test_slider_bounce}, {"invalid-startup", test_invalid_startup}, {"slider-wrap", test_slider_wrap}, {"usb", test_usb}, {"synthetic", test_synthetic}, {"vial-authorization", test_vial_authorization},
     };
     for (unsigned i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i) {
         if (strcmp(argv[1], tests[i].name) == 0) {

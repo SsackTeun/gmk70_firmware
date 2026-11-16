@@ -2,9 +2,10 @@
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
+#include "../../qmk-common/core/board.h"
 
-#define GMK_LIGHT_LEFT 36U
-#define GMK_LIGHT_RIGHT 41U
+#define GMK_LIGHT_LEFT GMK70_LED_LEFT
+#define GMK_LIGHT_RIGHT GMK70_LED_RIGHT
 #define GMK_LIGHT_PIXELS (GMK_LIGHT_LEFT + GMK_LIGHT_RIGHT)
 #define GMK_LIGHT_CHUNKS 11U
 

@@ -1,3 +1,4 @@
+#include "../../../core/indicators.h"
 // Copyright 2024 yangzheng20003 (@yangzheng20003)
 // SPDX-License-Identifier: GPL-2.0-or-later
 
@@ -787,15 +788,9 @@ void housekeeping_task_user(void) { // loop
 
     bat_full_flag = gpio_read_pin(BAT_FULL_PIN);
 
-    if (confinfo.flag && (bat_full_flag)) {
-        hs_now_mode = MD_SND_CMD_DEVCTRL_CHARGING_DONE;
-    } else if (confinfo.flag) {
-        hs_now_mode = MD_SND_CMD_DEVCTRL_CHARGING;
-    } else {
-        hs_now_mode = MD_SND_CMD_DEVCTRL_CHARGING_STOP;
-    }
+    hs_now_mode = gmk70_charger_command(confinfo.flag, bat_full_flag);
 
-    if (!hs_current_time || timer_elapsed32(hs_current_time) > 1000) {
+    if (!hs_current_time || (uint32_t)(timer_read32() - hs_current_time) > GMK70_CHARGER_REFRESH_MS) {
         hs_current_time = timer_read32();
         md_send_devctrl(hs_now_mode);
     }
@@ -838,51 +833,10 @@ void wireless_devs_change_kb(uint8_t old_devs, uint8_t new_devs, bool reset) {
         eeconfig_confinfo_update(confinfo.raw);
     }
 
-    switch (new_devs) {
-        case DEVS_BT1: {
-            if (reset) {
-                rgb_matrix_wls_indicator_set(HS_RGB_BLINK_INDEX_BT1, (RGB){HS_LBACK_COLOR_BT1}, 200, 1);
-            } else {
-                rgb_matrix_wls_indicator_set(HS_RGB_BLINK_INDEX_BT1, (RGB){HS_PAIR_COLOR_BT1}, 500, 1);
-            }
-        } break;
-        case DEVS_BT2: {
-            if (reset) {
-                rgb_matrix_wls_indicator_set(HS_RGB_BLINK_INDEX_BT2, (RGB){HS_LBACK_COLOR_BT2}, 200, 1);
-            } else {
-                rgb_matrix_wls_indicator_set(HS_RGB_BLINK_INDEX_BT2, (RGB){HS_PAIR_COLOR_BT2}, 500, 1);
-            }
-        } break;
-        case DEVS_BT3: {
-            if (reset) {
-                rgb_matrix_wls_indicator_set(HS_RGB_BLINK_INDEX_BT3, (RGB){HS_LBACK_COLOR_BT3}, 200, 1);
-            } else {
-                rgb_matrix_wls_indicator_set(HS_RGB_BLINK_INDEX_BT3, (RGB){HS_PAIR_COLOR_BT3}, 500, 1);
-            }
-        } break;
-        case DEVS_BT4: {
-            if (reset) {
-                rgb_matrix_wls_indicator_set(41, (RGB){RGB_BLUE}, 200, 1);
-            } else {
-                rgb_matrix_wls_indicator_set(41, (RGB){RGB_BLUE}, 500, 1);
-            }
-        } break;
-        case DEVS_BT5: {
-            if (reset) {
-                rgb_matrix_wls_indicator_set(42, (RGB){RGB_BLUE}, 200, 1);
-            } else {
-                rgb_matrix_wls_indicator_set(42, (RGB){RGB_BLUE}, 500, 1);
-            }
-        } break;
-        case DEVS_2G4: {
-            if (reset) {
-                rgb_matrix_wls_indicator_set(HS_RGB_BLINK_INDEX_2G4, (RGB){HS_LBACK_COLOR_2G4}, 200, 1);
-            } else {
-                rgb_matrix_wls_indicator_set(HS_RGB_BLINK_INDEX_2G4, (RGB){HS_LBACK_COLOR_2G4}, 500, 1);
-            }
-        } break;
-        default:
-            break;
+    unsigned index = gmk70_radio_led(new_devs);
+    if (index != UINT8_MAX) {
+        struct gmk70_color shade = gmk70_radio_color(new_devs, 255);
+        rgb_matrix_wls_indicator_set((uint8_t)index, (RGB){shade.r, shade.g, shade.b}, gmk70_radio_blink_interval(reset), 1);
     }
 }
 
@@ -970,6 +924,9 @@ void bat_indicators(void) {
         return;
     }
 
+    bool critical = battery_process_time != 0;
+    gmk70_critical_update(&battery_process_time, &critical, timer_read32(), gmk70_battery_warning(true, percentage, 0, confinfo.flag), percentage);
+    if (!critical) battery_process_time = 0;
     if (confinfo.flag) {
         battery_process_time = 0;
         stock_battery_render_charging(true, bat_full_flag);
@@ -977,11 +934,7 @@ void bat_indicators(void) {
         rgb_matrix_hs_bat_set(HS_MATRIX_BLINK_INDEX_BAT, (RGB){0xFF, 0x00, 0x00}, 250, 1);
 
         if (percentage <= BATTERY_CAPACITY_STOP) {
-            if (!battery_process_time) {
-                battery_process_time = timer_read32();
-            }
-
-            if (battery_process_time && timer_elapsed32(battery_process_time) > 60000) {
+            if (gmk70_critical_due(timer_read32(), battery_process_time, percentage)) {
                 battery_process_time = 0;
                 lower_sleep          = true;
                 split_diagnostics_event(SPLIT_DIAG_SLEEP_REASON, SPLIT_DIAG_LOW_BATTERY, percentage, 0);
@@ -1095,7 +1048,7 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     }
 #endif
 
-    if (ee_clr_timer && timer_elapsed32(ee_clr_timer) > 3000) {
+    if (ee_clr_timer && (uint32_t)(timer_read32() - ee_clr_timer) > GMK70_HOLD_MS) {
         hs_reset_settings();
         ee_clr_timer = 0;
     }

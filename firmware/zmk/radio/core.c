@@ -4,13 +4,15 @@
  * module.c/module.h (Copyright 2024 Su (@isuua)). No pairing data is erased.
  */
 #include "core.h"
+#include "../../qmk-common/core/radio_protocol.h"
+#include "../../qmk-common/core/radio_tx.h"
 #include <errno.h>
 #include <string.h>
 
 enum {
     ACK_DRAIN_MS     = 20,
-    CONNECT_WAIT_MS  = 5000,
-    CONNECT_ATTEMPTS = 3,
+    CONNECT_WAIT_MS  = GMK70_RECONNECT_MS,
+    CONNECT_ATTEMPTS = GMK70_RECONNECT_ATTEMPTS,
 #if defined(CONFIG_ZMK_POINTING) && CONFIG_ZMK_POINTING
     RELEASE_ALL = 15
 #else
@@ -164,7 +166,7 @@ bool gmk_radio_core_prepare_stop(struct gmk_radio_core *radio, bool special, boo
     return true;
 }
 void gmk_radio_core_charger(struct gmk_radio_core *radio, bool cable, bool full) {
-    radio->charge_mode = cable ? (full ? 0x66 : 0x64) : 0x65;
+    radio->charge_mode = gmk70_charger_command(cable, full);
 }
 __attribute__((noinline)) bool gmk_radio_core_control_busy(const struct gmk_radio_core *radio) {
     return radio->waiting || radio->obsolete || radio->draining || radio->pending_select || radio->pending_pair || radio->sleep_pending || (!radio->stopping && radio->charge_mode != radio->charge_sent) || acknowledged_control(radio->inflight);
@@ -185,7 +187,7 @@ uint32_t gmk_radio_core_delay(const struct gmk_radio_core *radio, uint32_t now) 
     else if (radio->release || radio->pending_select || radio->pending_pair || radio->sleep_pending || radio->charge_mode != radio->charge_sent || (radio->count && radio->connection == GMK_RADIO_CONNECTED && radio->active == radio->selected))
         return 1;
     else if (radio->charge_mode) {
-        interval = 1000;
+        interval = GMK70_CHARGER_REFRESH_MS;
         started  = radio->charge_at;
     } else
         return connect ? connect : 1;
@@ -197,24 +199,9 @@ int gmk_radio_core_nkro(struct gmk_radio_core *radio, const uint8_t keyboard[8],
     return enqueue(radio, GMK_RADIO_TX_NKRO, keyboard, overflow);
 }
 void gmk_radio_core_notification(struct gmk_radio_core *radio, uint8_t command, uint8_t value) {
-    if (radio->stopping || command != 0x5b || !radio->accept_status || !wireless(radio->active) || radio->active != radio->selected) return;
-    uint8_t connection;
-    switch (value) {
-        case 0x31:
-            connection = GMK_RADIO_PAIRING;
-            break;
-        case 0x32:
-            connection = GMK_RADIO_CONNECTED;
-            break;
-        case 0x33:
-            connection = GMK_RADIO_DISCONNECTED;
-            break;
-        case 0x36:
-            connection = GMK_RADIO_REJECTED;
-            break;
-        default:
-            return;
-    }
+    if (radio->stopping || command != MD_REV_CMD_DEVCTRL || !radio->accept_status || !wireless(radio->active) || radio->active != radio->selected) return;
+    uint8_t connection = gmk70_radio_connection(value);
+    if (connection == UINT8_MAX) return;
     if (connection == radio->connection) return;
     bool preserve     = radio->resuming && (connection == GMK_RADIO_CONNECTED || connection == GMK_RADIO_DISCONNECTED);
     radio->connection = connection;
@@ -236,19 +223,16 @@ void gmk_radio_core_ack(struct gmk_radio_core *radio) {
     radio->retries = 0;
 }
 static bool claim(struct gmk_radio_core *radio, struct gmk_radio_frame *frame, enum gmk_radio_tx_kind kind, uint8_t length) {
-    frame->length = length;
-    uint8_t sum   = 0;
-    for (uint8_t i = 0; i < length - 1; ++i)
-        sum = (uint8_t)(sum + frame->bytes[i]);
-    frame->bytes[length - 1] = sum;
+    frame->length            = length;
+    frame->bytes[length - 1] = gmk70_radio_checksum(frame->bytes, (size_t)length - 1);
     radio->inflight          = (uint8_t)kind;
     return true;
 }
 static bool control(struct gmk_radio_core *radio, struct gmk_radio_frame *frame, enum gmk_radio_tx_kind kind, uint8_t channel) {
     static const uint8_t maintenance[] = {0x55, 0x57, 0, 0x70, 0x11};
     radio->tx_channel                  = channel;
-    frame->bytes[0]                    = 0xa6;
-    frame->bytes[1]                    = kind >= GMK_RADIO_TX_SLEEP_BT ? (kind == GMK_RADIO_TX_CHARGER ? channel : maintenance[kind - GMK_RADIO_TX_SLEEP_BT]) : kind == GMK_RADIO_TX_PAIR ? 0x51 : channel == GMK_HOST_USB ? 0x11 : channel == GMK_HOST_DONGLE ? 0x30 : (uint8_t)(0x30 + channel);
+    frame->bytes[0]                    = MD_SND_CMD_DEVCTRL;
+    frame->bytes[1]                    = kind >= GMK_RADIO_TX_SLEEP_BT ? (kind == GMK_RADIO_TX_CHARGER ? channel : maintenance[kind - GMK_RADIO_TX_SLEEP_BT]) : kind == GMK_RADIO_TX_PAIR ? 0x51 : gmk70_host_command(channel);
     return claim(radio, frame, kind, 3);
 }
 __attribute__((noipa)) enum gmk_radio_turn gmk_radio_core_next(struct gmk_radio_core *restrict radio, uint32_t now, struct gmk_radio_frame *restrict frame, bool battery_due) {
@@ -264,8 +248,8 @@ __attribute__((noipa)) enum gmk_radio_turn gmk_radio_core_next(struct gmk_radio_
     }
     memset(frame, 0, sizeof(*frame));
     if (radio->waiting) {
-        if ((uint32_t)(now - radio->sent_at) < 10) return false;
-        if (radio->retries == 50) {
+        if (gmk70_command_pending(now, radio->sent_at, GMK70_RADIO_TIMEOUT_MS, false)) return false;
+        if (gmk70_command_exhausted(radio->retries, GMK70_RADIO_RETRIES)) {
             if (radio->last_control >= GMK_RADIO_TX_SLEEP_BT) {
                 /* QMK drops an exhausted maintenance command after 50
                  * retries without disconnecting the selected host. */
@@ -285,7 +269,7 @@ __attribute__((noipa)) enum gmk_radio_turn gmk_radio_core_next(struct gmk_radio_
             }
             return false;
         }
-        ++radio->retries;
+        radio->retries    = gmk70_command_retry(radio->retries);
         radio->waiting    = false;
         radio->retransmit = true;
         return control(radio, frame, (enum gmk_radio_tx_kind)radio->last_control, radio->last_control == GMK_RADIO_TX_CHARGER ? radio->tx_channel : radio->active);
@@ -308,7 +292,7 @@ __attribute__((noipa)) enum gmk_radio_turn gmk_radio_core_next(struct gmk_radio_
         return claim(radio, frame, GMK_RADIO_TX_RELEASE_KEYBOARD, 10);
     }
     if (radio->release & 4) {
-        frame->bytes[0] = 0xa2;
+        frame->bytes[0] = MD_SND_CMD_SEND_NKRO;
         return claim(radio, frame, GMK_RADIO_TX_RELEASE_NKRO, 16);
     }
     if (radio->release & 2) {
@@ -336,14 +320,14 @@ __attribute__((noipa)) enum gmk_radio_turn gmk_radio_core_next(struct gmk_radio_
         discard(radio);
         return control(radio, frame, GMK_RADIO_TX_SELECT, radio->selected);
     }
-    if (radio->charge_mode && (radio->charge_mode != radio->charge_sent || (uint32_t)(now - radio->charge_at) >= 1000U)) return control(radio, frame, GMK_RADIO_TX_CHARGER, radio->charge_mode);
+    if (radio->charge_mode && (radio->charge_mode != radio->charge_sent || (uint32_t)(now - radio->charge_at) >= GMK70_CHARGER_REFRESH_MS)) return control(radio, frame, GMK_RADIO_TX_CHARGER, radio->charge_mode);
     /* One arbiter gives due telemetry a turn before ordinary HID while
      * retaining controls, zero releases and complete A1/A2 pair ownership. */
     if (battery_due && !radio->overflow_pending) return GMK_RADIO_TURN_BATTERY;
     if (!radio->count || radio->connection != GMK_RADIO_CONNECTED || radio->active != radio->selected) return false;
     const struct gmk_radio_report *report = &radio->queue[radio->head];
     if (radio->overflow_pending) {
-        frame->bytes[0] = 0xa2;
+        frame->bytes[0] = MD_SND_CMD_SEND_NKRO;
         memcpy(frame->bytes + 1, report->overflow, sizeof(report->overflow));
         radio->overflow_pending = false;
         radio->head             = (uint8_t)((radio->head + 1) % 8);
@@ -352,7 +336,7 @@ __attribute__((noipa)) enum gmk_radio_turn gmk_radio_core_next(struct gmk_radio_
     }
     bool consumer   = report->kind == GMK_RADIO_TX_CONSUMER;
     bool mouse      = report->kind == GMK_RADIO_TX_MOUSE;
-    frame->bytes[0] = consumer ? 0xa3 : mouse ? 0xa8 : 0xa1;
+    frame->bytes[0] = consumer ? MD_SND_CMD_SEND_CONSUMER : mouse ? MD_SND_CMD_SEND_MOUSE : MD_SND_CMD_SEND_KB;
     memcpy(frame->bytes + 1, report->bytes, consumer ? 2U : mouse ? 5U : 8U);
     if (report->kind == GMK_RADIO_TX_NKRO)
         /* Keep the snapshot at the head until its paired A2 is claimed. A

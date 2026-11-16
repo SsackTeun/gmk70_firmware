@@ -50,8 +50,11 @@ rebuild: clean
 	$(MAKE) build
 format:
 	bash ./scripts/format.sh
-test:
+test: test-common
 	bash ./scripts/test.sh
+test-common:
+	bash ./tests/common/run.sh
+.PHONY: test-common
 .PHONY: build build-release build-debug build-qmk-via build-diagnostic build-default build-qmk-default build-vial build-vial-updater build-vial-unlocked-updater build-zmk clean rebuild format test
 
 setup:
@@ -78,7 +81,7 @@ setup-zmk:
 	bash ./scripts/setup_zmk.sh
 .PHONY: setup-zmk
 
-test-zmk:
+test-zmk: test-common
 	bash ./tests/zmk/run_crc_tests.sh
 	bash ./tests/zmk/run_retained_tests.sh
 	bash ./tests/zmk/run_event_idle_tests.sh

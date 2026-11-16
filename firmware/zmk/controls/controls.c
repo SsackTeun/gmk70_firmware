@@ -1,3 +1,4 @@
+#include "../../qmk-common/core/indicators.h"
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "controls.h"
 #include "../runtime/idle.h"
@@ -239,11 +240,11 @@ void gmk_controls_radio_leds(uint8_t indicators) {
 
 /* 0 restores ordinary lighting; 1 and 2 explicitly draw the on/off phases. */
 static uint8_t blink_phase(uint32_t elapsed, uint32_t interval, uint32_t duration) {
-    return duration && elapsed >= duration ? 0 : (uint8_t)(1U + elapsed / interval % 2U);
+    return gmk70_blink_phase(elapsed, interval, duration);
 }
 static uint8_t radio_phase(uint32_t now) {
     if (preferences.channel == GMK_HOST_USB) return 0;
-    return blink_phase(now - preferences.radio_started, preferences.connection == GMK_RADIO_PAIRING ? 200U : 500U, preferences.connection == GMK_RADIO_CONNECTED ? 1000U : 0U);
+    return blink_phase(now - preferences.radio_started, gmk70_radio_blink_interval(preferences.connection == GMK_RADIO_PAIRING), preferences.connection == GMK_RADIO_CONNECTED ? 1000U : 0U);
 }
 static uint8_t os_phase(uint32_t now) {
     return preferences.os_feedback ? blink_phase(now - preferences.os_started, 250, 1500) : 0;
@@ -260,7 +261,7 @@ uint32_t gmk_controls_visual_delay(uint32_t now) {
     k_spinlock_key_t key   = k_spin_lock(&preferences.lock);
     uint32_t         delay = UINT32_MAX;
     if (radio_phase(now)) {
-        uint32_t interval = preferences.connection == GMK_RADIO_PAIRING ? 200U : 500U;
+        uint32_t interval = gmk70_radio_blink_interval(preferences.connection == GMK_RADIO_PAIRING);
         delay             = interval - (now - preferences.radio_started) % interval;
     }
     if (os_phase(now)) {
@@ -281,19 +282,20 @@ void gmk_controls_overlay(uint8_t *rgb, size_t count, uint32_t now, bool left, b
     k_spinlock_key_t key   = k_spin_lock(&preferences.lock);
     uint8_t          flags = preferences.value.flags;
     uint8_t          leds  = preferences.channel == GMK_HOST_USB ? preferences.usb_leds : preferences.radio_leds;
-    if (leds & 2U) color(rgb, count, 18, 80, 80, 80);
-    if ((flags & (GUI_LOCK | MAC_MODE)) == GUI_LOCK) color(rgb, count, 73, 80, 80, 80);
+    if (leds & 2U) color(rgb, count, GMK70_CAPS_LED, 80, 80, 80);
+    if ((flags & (GUI_LOCK | MAC_MODE)) == GUI_LOCK) color(rgb, count, GMK70_GUI_LED, 80, 80, 80);
     uint8_t phase = os_phase(now);
     if (phase) {
         uint8_t white = phase == 1 ? 80 : 0;
-        color(rgb, count, flags & MAC_MODE ? 20U : 19U, white, white, white);
+        color(rgb, count, flags & MAC_MODE ? GMK70_MAC_LED : GMK70_WINDOWS_LED, white, white, white);
     }
     phase = radio_phase(now);
     if (phase) {
-        uint8_t  channel   = preferences.channel;
-        unsigned index     = channel <= GMK_HOST_BT3 ? 15U - channel : channel <= GMK_HOST_BT5 ? 37U + channel : 11U;
-        uint8_t  intensity = phase == 1 ? 80 : 0;
-        color(rgb, count, index, 0, channel == GMK_HOST_DONGLE ? intensity : 0, channel == GMK_HOST_DONGLE ? 0 : intensity);
+        uint8_t            channel   = preferences.channel;
+        unsigned           index     = gmk70_radio_led(channel);
+        uint8_t            intensity = phase == 1 ? 80 : 0;
+        struct gmk70_color shade     = gmk70_radio_color(channel, intensity);
+        color(rgb, count, index, shade.r, shade.g, shade.b);
     }
     k_spin_unlock(&preferences.lock, key);
 }

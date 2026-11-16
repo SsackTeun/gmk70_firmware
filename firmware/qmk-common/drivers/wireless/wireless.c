@@ -4,12 +4,13 @@
 
 #include "quantum.h"
 #include "wireless.h"
+#include "../../core/policy.h"
 #include "split_diagnostics.h"
 #include "radio_keys.h"
 #include "smsg.h"
 
 #ifndef WLS_INQUIRY_BAT_TIME
-#    define WLS_INQUIRY_BAT_TIME 3000
+#    define WLS_INQUIRY_BAT_TIME GMK70_BATTERY_QUERY_MS
 #endif
 
 static uint8_t  wls_devs = DEVS_USB;
@@ -39,7 +40,7 @@ static void reconnect_task(void) {
         reconnect_generation = generation;
         if (state == MD_STATE_DISCONNECTED) {
             if (reconnect_state != state) {
-                reconnect_attempts = 3;
+                reconnect_attempts = GMK70_RECONNECT_ATTEMPTS;
                 reconnect_at       = sync_timer_read32();
             }
         } else {
@@ -49,7 +50,7 @@ static void reconnect_task(void) {
     }
     // Maintenance never wakes STOP/PRE, resets the idle timer, or occupies the
     // queue behind an outstanding control. ACK is not a connection status.
-    if (!reconnect_attempts || lpwr_get_state() != LPWR_NORMAL || smsg_is_busy() || sync_timer_elapsed32(reconnect_at) < 5000) return;
+    if (!reconnect_attempts || lpwr_get_state() != LPWR_NORMAL || smsg_is_busy() || sync_timer_elapsed32(reconnect_at) < GMK70_RECONNECT_MS) return;
     --reconnect_attempts;
     reconnect_at = sync_timer_read32();
     md_devs_change(wls_devs, false);

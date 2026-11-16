@@ -146,6 +146,7 @@ class PairingTests(unittest.TestCase):
                     "cross-mode",
                     "slider",
                     "slider-bounce",
+                    "invalid-startup",
                     "slider-wrap",
                     "usb",
                     "synthetic",

@@ -2,12 +2,12 @@
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
+#include "../../qmk-common/core/selection.h"
 
 /* Zero initialization is sufficient; all times use wrapping millisecond ticks. */
 struct gmk_radio_selector {
-    uint32_t candidate_at, held_at;
-    uint8_t  candidate_raw, stable_raw, held_position, held_channel;
-    bool     have_candidate, have_stable, holding;
+    struct gmk70_switch mode;
+    struct gmk70_hold   hold;
 };
 /* Invalid raw values cancel pairing and restart debounce without emitting. */
 bool gmk_radio_selector_switch(struct gmk_radio_selector *selector, uint8_t raw, uint32_t now, uint8_t last_bt, uint8_t *out);

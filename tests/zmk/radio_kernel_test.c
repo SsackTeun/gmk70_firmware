@@ -620,7 +620,7 @@ static void native_shortcut_taps_switch_profiles_during_an_old_select(void) {
         event.timestamp = radio_test_time;
         assert(!registered_api->binding_released(&next_key, event));
         run_work();
-        assert(core.selected == next && !core.pending_pair && !selector.holding);
+        assert(core.selected == next && !core.pending_pair && !selector.hold.active);
         struct gmk_radio_frame frame;
         assert(!gmk_radio_next(radio_test_time, &frame, false));
         gmk_radio_ack(); /* Old profile's delayed ACK must not complete the next one. */
@@ -638,7 +638,7 @@ static void native_shortcut_taps_switch_profiles_during_an_old_select(void) {
         gmk_radio_poll();
         run_work();
         settle();
-        assert(!selector.holding && !core.pending_pair && !core.faulted);
+        assert(!selector.hold.active && !core.pending_pair && !core.faulted);
         const uint8_t key[8] = {0, 0, 4};
         assert(!gmk_radio_submit_keyboard(key));
     }

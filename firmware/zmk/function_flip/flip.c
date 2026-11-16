@@ -12,7 +12,7 @@
 #include <zmk/keymap.h>
 #include <zmk/rgb_underglow.h>
 
-static struct gmk_flip_core    core;
+static struct gmk70_flip_state core;
 static struct k_spinlock       lock;
 static struct gmk_bool_setting setting;
 static struct k_mutex          dispatch_mutex;
@@ -187,7 +187,7 @@ static int load(const char *name, size_t len, settings_read_cb read, void *ctx) 
 }
 SETTINGS_STATIC_HANDLER_DEFINE(gmk_flip, "gmk_flip", NULL, load, NULL, NULL);
 static int flip_init(void) {
-    core = (struct gmk_flip_core){0};
+    core = (struct gmk70_flip_state){0};
     k_mutex_init(&dispatch_mutex);
     dispatch         = NULL;
     report_modifiers = 0;

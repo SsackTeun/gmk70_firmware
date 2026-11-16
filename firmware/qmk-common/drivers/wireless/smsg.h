@@ -5,8 +5,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "../../core/radio_tx.h"
 
-typedef enum { smsg_state_free = 0, smsg_state_busy, smsg_state_retry, smsg_state_replied } smsg_states_t;
+typedef enum { smsg_state_free = GMK70_COMMAND_IDLE, smsg_state_busy = GMK70_COMMAND_WAITING, smsg_state_retry = GMK70_COMMAND_RETRY, smsg_state_replied = GMK70_COMMAND_REPLIED } smsg_states_t;
 
 void          smsg_init(void);
 bool          smsg_push(uint8_t *buf, uint32_t size);

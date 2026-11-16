@@ -3,18 +3,14 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "../../../core/function_flip.h"
 
 typedef struct {
     uint8_t keycode;
     uint8_t modifiers;
 } gmk70_flip_target_t;
 
-typedef struct {
-    gmk70_flip_target_t held[24];
-    uint32_t            held_mask;
-    // Unchanged presses keep their native QMK processors through release.
-    uint32_t passthrough_mask;
-} gmk70_flip_state_t;
+typedef struct gmk70_flip_state gmk70_flip_state_t;
 
 typedef struct {
     gmk70_flip_target_t target;

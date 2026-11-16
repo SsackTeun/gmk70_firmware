@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "../wired/virtual_keys.h"
 #include "battery_view.h"
+#include "../../qmk-common/core/indicators.h"
 #include "../battery/battery.h"
 #include <errno.h>
 #include <string.h>
@@ -30,22 +31,23 @@ static void color(uint8_t *rgb, unsigned index, uint8_t r, uint8_t g, uint8_t b)
     rgb[3 * index + 2] = b;
 }
 bool gmk_battery_warning_active(const struct gmk_battery_status *status) {
-    return status->valid && status->age_ms <= 10000U && status->percentage <= 15 && !status->cable;
+    return gmk70_battery_warning(status->valid, status->percentage, status->age_ms, status->cable);
 }
 void gmk_battery_warning_overlay(const struct gmk_battery_status *status, uint8_t pixels[3 * GMK_LIGHT_PIXELS], uint32_t now) {
-    if (gmk_battery_warning_active(status)) color(pixels, 33, (now / 250U) % 2U == 0 ? 80 : 0, 0, 0);
+    if (gmk_battery_warning_active(status)) color(pixels, GMK70_BATTERY_LED, (now / 250U) % 2U == 0 ? 80 : 0, 0, 0);
 }
 
 void gmk_battery_view_overlay(const struct gmk_battery_view *view, const struct gmk_battery_status *status, uint8_t pixels[3 * GMK_LIGHT_PIXELS]) {
     if (held(view, GMK_BATTERY_LEVEL)) {
-        static const uint8_t indices[10] = {5, 6, 7, 8, 9, 39, 40, 41, 42, 43};
+        static const uint8_t indices[10] = GMK70_BATTERY_LED_INDICES;
         memset(pixels, 0, 3 * GMK_LIGHT_PIXELS);
         for (unsigned i = 0; i < 10; ++i) {
-            if (!status->valid || status->percentage > 100)
-                color(pixels, indices[i], 24, 0, 24);
-            else if (i == 0 || i < status->percentage / 10)
-                color(pixels, indices[i], status->percentage < 30 ? 80 : 0, status->percentage < 30 ? 0 : 80, 0);
+            struct gmk70_color segment = gmk70_battery_segment(status->percentage, status->valid, i, 80);
+            color(pixels, indices[i], segment.r, segment.g, segment.b);
         }
     }
-    if (held(view, GMK_BATTERY_CHARGING) && status->cable) color(pixels, 33, status->full ? 0 : 80, status->full ? 80 : 0, 0);
+    if (held(view, GMK_BATTERY_CHARGING) && status->cable) {
+        struct gmk70_color charging = gmk70_charging_color(status->full);
+        color(pixels, GMK70_BATTERY_LED, charging.r, charging.g, charging.b);
+    }
 }

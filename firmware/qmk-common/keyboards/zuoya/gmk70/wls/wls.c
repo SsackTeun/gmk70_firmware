@@ -1,4 +1,5 @@
 #include "wls.h"
+#include "../../../../core/selection.h"
 #include "split_diagnostics.h"
 #include "pairing_hold.h"
 
@@ -14,9 +15,10 @@ enum modeio_mode hs_modeio_read(void) {
 }
 
 bool hs_modeio_detection(bool update, uint8_t *mode, uint8_t lsat_btdev) {
-    static uint32_t         scan_timer = 0x00;
-    static uint32_t         candidate_at;
-    static enum modeio_mode candidate = hs_invalid, stable = hs_invalid;
+    static uint32_t scan_timer = 0x00;
+    // Native QMK starts with hs_invalid already stable, unlike ZMK's initial
+    // undecided selector. Encoding hs_invalid as raw zero preserves that gate.
+    static struct gmk70_switch selector = {.have_candidate = true, .have_stable = true};
 
     if ((update != true) && (timer_elapsed32(scan_timer) <= (HS_MODEIO_DETECTION_TIME))) {
         return false;
@@ -24,30 +26,12 @@ bool hs_modeio_detection(bool update, uint8_t *mode, uint8_t lsat_btdev) {
     scan_timer                      = timer_read32();
     const enum modeio_mode now_mode = hs_modeio_read();
     *mode                           = now_mode;
-    if (candidate != now_mode) {
-        // Even a brief move away and back must cancel an outstanding hold.
-        gmk70_pairing_cancel();
-        candidate    = now_mode;
-        candidate_at = scan_timer;
-        return false;
-    }
-    if (timer_elapsed32(candidate_at) < HS_MODEIO_DETECTION_TIME || stable == now_mode) return false;
-    stable = now_mode;
-
-    uint8_t destination;
-    switch (now_mode) {
-        case hs_bt:
-            destination = lsat_btdev >= DEVS_BT1 && lsat_btdev <= DEVS_BT5 ? lsat_btdev : DEVS_BT1;
-            break;
-        case hs_2g4:
-            destination = DEVS_2G4;
-            break;
-        case hs_usb:
-            destination = DEVS_USB;
-            break;
-        default:
-            return false;
-    }
+    uint8_t  raw                    = now_mode == hs_usb ? 3 : now_mode == hs_bt ? 2 : now_mode == hs_2g4 ? 1 : 0;
+    unsigned transition             = gmk70_switch_update(&selector, raw, scan_timer, HS_MODEIO_DETECTION_TIME);
+    if (transition & GMK70_SWITCH_CANDIDATE) gmk70_pairing_cancel();
+    if (!(transition & GMK70_SWITCH_STABLE)) return false;
+    uint8_t destination = gmk70_switch_host(raw, lsat_btdev);
+    if (destination == UINT8_MAX) return false;
 
     // An unchanged slider must not undo a shortcut on a later scan or wake.
     if (wireless_get_current_devs() == destination) return false;

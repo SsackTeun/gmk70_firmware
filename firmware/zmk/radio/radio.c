@@ -176,7 +176,7 @@ int gmk_radio_hold(uint8_t channel, uint32_t position) {
 }
 void gmk_radio_unhold(uint32_t position) {
     k_spinlock_key_t key = k_spin_lock(&lock);
-    if (selector.held_channel && selector.held_position == position) cancel_pair_locked();
+    if (selector.hold.action && selector.hold.position == position) cancel_pair_locked();
     gmk_radio_selector_release(&selector, position);
     k_spin_unlock(&lock, key);
 }
@@ -190,7 +190,7 @@ __attribute__((noipa)) void gmk_radio_poll(void) {
             startup_pending = false;
             gmk_radio_core_startup(&core);
         }
-        if (!valid_mode(raw) || (selector.have_candidate && selector.candidate_raw != raw)) cancel_pair_locked();
+        if (!valid_mode(raw) || (selector.mode.have_candidate && selector.mode.candidate_raw != raw)) cancel_pair_locked();
         if (core.pending_pair && (raw != pair_raw || !valid_mode(raw))) core.pending_pair = false;
         if (gmk_radio_selector_switch(&selector, raw, now, core.last_bt, &channel)) {
             if (channel == UINT8_MAX) {
@@ -222,19 +222,19 @@ uint32_t gmk_radio_delay(void) {
     uint32_t         delay = !available || quiesced ? UINT32_MAX : gmk_radio_core_delay(&core, now);
     if (available && !quiesced) {
         if (mailbox.pending || mailbox.clear) delay = 1;
-        if (selector.have_candidate && (!selector.have_stable || selector.candidate_raw != selector.stable_raw)) {
-            uint32_t elapsed = now - selector.candidate_at;
-            uint32_t next    = elapsed >= 50 ? 1 : 50 - elapsed;
+        if (selector.mode.have_candidate && (!selector.mode.have_stable || selector.mode.candidate_raw != selector.mode.stable_raw)) {
+            uint32_t elapsed = now - selector.mode.candidate_at;
+            uint32_t next    = elapsed >= GMK70_SWITCH_DEBOUNCE_MS ? 1 : GMK70_SWITCH_DEBOUNCE_MS - elapsed;
             if (next < delay) delay = next;
         }
-        if (selector.holding) {
-            uint32_t elapsed = now - selector.held_at;
-            uint32_t next    = elapsed >= 3000 ? 1 : 3000 - elapsed;
+        if (selector.hold.active) {
+            uint32_t elapsed = now - selector.hold.since;
+            uint32_t next    = elapsed >= GMK70_HOLD_MS ? 1 : GMK70_HOLD_MS - elapsed;
             if (next < delay) delay = next;
         }
         if (disconnected && core.selected != GMK_HOST_USB) {
             uint32_t elapsed = now - disconnected_since;
-            if (elapsed < 30000U && 30000U - elapsed < delay) delay = 30000U - elapsed;
+            if (elapsed < GMK70_DISCONNECTED_SLEEP_MS && GMK70_DISCONNECTED_SLEEP_MS - elapsed < delay) delay = GMK70_DISCONNECTED_SLEEP_MS - elapsed;
         }
     }
     if (available && !quiesced && startup_pending) {
@@ -323,7 +323,7 @@ void gmk_radio_notification(uint8_t command, uint8_t value) {
 }
 bool gmk_radio_disconnected_timeout(void) {
     k_spinlock_key_t key     = k_spin_lock(&lock);
-    bool             expired = available && disconnected && core.selected != GMK_HOST_USB && (uint32_t)(k_uptime_get_32() - disconnected_since) >= 30000U;
+    bool             expired = available && disconnected && core.selected != GMK_HOST_USB && (uint32_t)(k_uptime_get_32() - disconnected_since) >= GMK70_DISCONNECTED_SLEEP_MS;
     k_spin_unlock(&lock, key);
     return expired;
 }
@@ -355,7 +355,7 @@ bool gmk_radio_control_busy(void) {
     return busy;
 }
 static bool idle_locked(void) {
-    return !available || (gmk_radio_core_idle(&core) && !mailbox.pending && !mailbox.clear && !processing && !selector.holding
+    return !available || (gmk_radio_core_idle(&core) && !mailbox.pending && !mailbox.clear && !processing && !selector.hold.active
 #ifdef CONFIG_GMK70_RADIO_QUALIFICATION
                           && !mailbox.marker
 #endif

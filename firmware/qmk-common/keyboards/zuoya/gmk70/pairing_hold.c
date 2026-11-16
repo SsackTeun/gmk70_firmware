@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "pairing_hold.h"
+#include "../../../core/selection.h"
 #include "deferred_exec.h"
 #include "stock_keycodes.h"
 #include "wireless.h"
@@ -10,14 +11,13 @@
 
 static struct {
     deferred_token                 token;
-    uint8_t                        row;
-    uint8_t                        col;
-    uint8_t                        device;
+    struct gmk70_hold              hold;
     enum modeio_mode               physical_mode;
     gmk70_pairing_device_allowed_t device_allowed;
 } pairing;
 
 void gmk70_pairing_cancel(void) {
+    pairing.hold.active = false;
     if (pairing.token != INVALID_DEFERRED_TOKEN) {
         cancel_deferred_exec(pairing.token);
         pairing.token = INVALID_DEFERRED_TOKEN;
@@ -25,15 +25,16 @@ void gmk70_pairing_cancel(void) {
 }
 
 void gmk70_pairing_release_position(uint8_t row, uint8_t col) {
-    if (row == pairing.row && col == pairing.col) gmk70_pairing_cancel();
+    if (row * MATRIX_COLS + col == pairing.hold.position) gmk70_pairing_cancel();
 }
 
 static uint32_t pairing_complete(uint32_t trigger_time, void *cb_arg) {
     (void)trigger_time;
     (void)cb_arg;
-    pairing.token = INVALID_DEFERRED_TOKEN;
+    pairing.token       = INVALID_DEFERRED_TOKEN;
+    pairing.hold.active = false;
     // Check the pins again in case the scan has not observed a new position yet.
-    if (hs_modeio_read() == pairing.physical_mode && pairing.device_allowed(pairing.device)) wireless_devs_change(wireless_get_current_devs(), pairing.device, true);
+    if (hs_modeio_read() == pairing.physical_mode && pairing.device_allowed(pairing.hold.action)) wireless_devs_change(wireless_get_current_devs(), pairing.hold.action, true);
     return 0;
 }
 
@@ -48,12 +49,10 @@ bool gmk70_pairing_process_record(uint16_t keycode, keyrecord_t *record, gmk70_p
     if (wireless_get_current_devs() != device) wireless_devs_change(wireless_get_current_devs(), device, false);
     // Synthetic selectors may change hosts, but cannot establish a physical hold.
     if (device != DEVS_USB && physical) {
-        pairing.row            = record->event.key.row;
-        pairing.col            = record->event.key.col;
-        pairing.device         = device;
+        gmk70_hold_start(&pairing.hold, record->event.key.row * MATRIX_COLS + record->event.key.col, device, timer_read32());
         pairing.physical_mode  = hs_modeio_read();
         pairing.device_allowed = device_allowed;
-        pairing.token          = defer_exec(3000, pairing_complete, NULL);
+        pairing.token          = defer_exec(GMK70_HOLD_MS, pairing_complete, NULL);
     }
     hs_rgb_blink_set_timer(timer_read32());
     return false;

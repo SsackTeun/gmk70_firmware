@@ -7,7 +7,7 @@ static const uint32_t mac_number[12]    = {0xc0070, 0xc006f, 0x0807002b, 0x08070
 static const uint32_t mac_function[12]  = {0xc0183, 0xc00ea, 0xc00e9, 0xc00e2, 0xc00b7, 0xc00b6, 0xc00cd, 0xc00b5, 0xc018a, 0xc0223, 0xc0192, 0xc0221};
 static const uint8_t  number_usages[12] = {0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x2d, 0x2e};
 static void           complete_stock_tables(void) {
-    struct gmk_flip_core core = {0};
+    struct gmk70_flip_state core = {0};
     for (unsigned enabled = 0; enabled < 2; ++enabled)
         for (unsigned mac = 0; mac < 2; ++mac)
             for (unsigned family = 0; family < 2; ++family)
@@ -25,8 +25,8 @@ static void           complete_stock_tables(void) {
                 }
 }
 static void hold_context_and_modifiers(void) {
-    struct gmk_flip_core   core = {0};
-    struct gmk_flip_output out  = gmk_flip_core_event(&core, 0x0207001e, true, false);
+    struct gmk70_flip_state core = {0};
+    struct gmk_flip_output  out  = gmk_flip_core_event(&core, 0x0207001e, true, false);
     assert(out.key == 0x0207001e);
     core.enabled = true;
     out          = gmk_flip_core_event(&core, 0x7001e, false, true);
@@ -44,8 +44,8 @@ static void hold_context_and_modifiers(void) {
     assert(!out.emit && !out.brightness);
 }
 static void duplicate_source_releases_old_target_and_unrelated_keys_pass(void) {
-    struct gmk_flip_core   core = {.enabled = true};
-    struct gmk_flip_output out  = gmk_flip_core_event(&core, 0x7001e, true, false);
+    struct gmk70_flip_state core = {.enabled = true};
+    struct gmk_flip_output  out  = gmk_flip_core_event(&core, 0x7001e, true, false);
     assert(out.key == 0x7003a && !out.release_previous);
     out = gmk_flip_core_event(&core, 0x0107001e, true, true);
     assert(out.release_previous && out.previous == 0x7003a && out.key == 0x010c0070);

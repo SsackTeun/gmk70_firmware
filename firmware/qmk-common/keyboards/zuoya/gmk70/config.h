@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #pragma once
+#include "../../../core/board.h"
 
 // Initialize absent/reset native settings without overriding a saved choice.
 #define NKRO_DEFAULT_ON true
@@ -25,10 +26,10 @@
 #define MD_DONGLE_PRODUCT "ZUOYA GMK70"
 
 /* Device Connection RGB Indicator Light Index And Color */
-#define HS_RGB_BLINK_INDEX_BT1 14
-#define HS_RGB_BLINK_INDEX_BT2 13
-#define HS_RGB_BLINK_INDEX_BT3 12
-#define HS_RGB_BLINK_INDEX_2G4 11
+#define HS_RGB_BLINK_INDEX_BT1 GMK70_BT1_LED
+#define HS_RGB_BLINK_INDEX_BT2 GMK70_BT2_LED
+#define HS_RGB_BLINK_INDEX_BT3 GMK70_BT3_LED
+#define HS_RGB_BLINK_INDEX_2G4 GMK70_DONGLE_LED
 
 #define HS_LBACK_COLOR_BT1 RGB_BLUE
 #define HS_LBACK_COLOR_BT2 RGB_BLUE
@@ -43,14 +44,14 @@
 #define HS_PAIR_COLOR_USB RGB_WHITE
 
 /* Battery */
-#define BATTERY_CAPACITY_LOW 15
-#define BATTERY_CAPACITY_STOP 0
-#define RGB_MATRIX_BAT_INDEX_MAP {5, 6, 7, 8, 9, 39, 40, 41, 42, 43}
+#define BATTERY_CAPACITY_LOW GMK70_BATTERY_WARNING_LEVEL
+#define BATTERY_CAPACITY_STOP GMK70_BATTERY_STOP_LEVEL
+#define RGB_MATRIX_BAT_INDEX_MAP GMK70_BATTERY_LED_INDICES
 
 /* Status Indicator Lamp */
-#define HS_MATRIX_BLINK_INDEX_BAT 33
-#define HS_RGB_INDEX_CAPS 18
-#define HS_RGB_INDEX_WIN_LOCK 73
+#define HS_MATRIX_BLINK_INDEX_BAT GMK70_BATTERY_LED
+#define HS_RGB_INDEX_CAPS GMK70_CAPS_LED
+#define HS_RGB_INDEX_WIN_LOCK GMK70_GUI_LED
 
 #define HS_RGB_BLINK_INDEX_WIN 19
 #define HS_RGB_BLINK_INDEX_MAC 20

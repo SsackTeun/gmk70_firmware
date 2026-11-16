@@ -3,6 +3,7 @@
 
 #include "quantum.h"
 #include "wireless.h"
+#include "../../core/policy.h"
 #include "usb_main.h"
 #include "split_diagnostics.h"
 
@@ -216,7 +217,7 @@ bool lpwr_is_allow_timeout(void) {
         lpwr_activity_trigger();
     }
 
-    if (manual_timeout || (timeout && (timer_elapsed32(lpwr_activity_timestamp) >= timeout))) {
+    if (manual_timeout || gmk70_inactivity_due(timer_read32(), lpwr_activity_timestamp, timeout)) {
         bool was_manual = manual_timeout;
         manual_timeout  = false;
         if (!lpwr_timeout_accept_hook()) return false;

@@ -7,6 +7,7 @@
  * Radio frames share this sole UART3 owner; the external module is unchanged.
  */
 #include "battery.h"
+#include "../../qmk-common/core/radio_protocol.h"
 #include "wired.h"
 #ifdef CONFIG_GMK70_RADIO
 #    include "radio.h"
@@ -41,20 +42,14 @@ static void     radio_uart_isr(const void *unused) {
 #endif
 
 #define BATTERY_UART_BASE 0x40008400U
-#define BATTERY_QUERY_MS 3000U
-#define BATTERY_TIMEOUT_MS 10U
-#define BATTERY_FRESH_MS 10000U
+#define BATTERY_QUERY_MS GMK70_BATTERY_QUERY_MS
+#define BATTERY_TIMEOUT_MS GMK70_RADIO_TIMEOUT_MS
+#define BATTERY_FRESH_MS GMK70_BATTERY_FRESH_MS
 
-struct battery_parser {
-    uint32_t last_byte_ms;
-    uint16_t count, length;
-    uint8_t  command, value, sum;
-    bool     discard;
-};
 enum battery_transmission { BATTERY_TX_NONE, BATTERY_TX_QUERY, BATTERY_TX_ACK, BATTERY_TX_RADIO };
 struct battery_state {
     /* Private worker state: short offsets keep Cortex-M3 byte loads compact. */
-    struct battery_parser     parser;
+    struct gmk70_radio_parser parser;
     uint8_t                   tx_offset, acknowledgements;
     bool                      initialized, have_cycle, waiting_ack, retry_used, query_pending, quiesced, demand;
     enum battery_transmission transmitting;
@@ -127,20 +122,8 @@ bool gmk_battery_power_quiesce(bool enabled) {
     return true;
 }
 
-static bool recognized(uint8_t byte) {
-    return byte == 0x5a || byte == 0x5b || byte == 0x5c || byte == 0x5d || byte == 0x60 || byte == 0x61 || byte == 0xaf;
-}
-static void begin_frame(uint8_t byte, uint32_t now) {
-    state.parser = (struct battery_parser){0};
-    if (!recognized(byte)) return;
-    state.parser.command      = byte;
-    state.parser.sum          = byte;
-    state.parser.count        = 1;
-    state.parser.length       = 3;
-    state.parser.last_byte_ms = now;
-}
 static void accept_frame(uint32_t now) {
-    struct battery_parser *parser = &state.parser;
+    struct gmk70_radio_parser *parser = &state.parser;
     if (parser->command == 0x61) {
 #ifdef CONFIG_GMK70_RADIO
         if (!state.waiting_ack) {
@@ -158,9 +141,9 @@ static void accept_frame(uint32_t now) {
     else
         ++state.status.errors;
 #ifdef CONFIG_GMK70_RADIO
-    if (parser->command != 0xaf) gmk_radio_notification(parser->command, parser->value);
+    if (parser->command != MD_REV_CMD_RAW) gmk_radio_notification(parser->command, parser->value);
 #endif
-    if (parser->command != 0x5c) return;
+    if (parser->command != MD_REV_CMD_BATVOL) return;
     if (parser->value > 100) {
         ++state.status.errors;
         return;
@@ -171,50 +154,12 @@ static void accept_frame(uint32_t now) {
     ++state.status.replies;
 }
 static void receive_byte(uint8_t byte, uint32_t now) {
-    struct battery_parser *parser = &state.parser;
-    if (!parser->count) {
-        begin_frame(byte, now);
-        return;
-    }
-    parser->last_byte_ms = now;
-    if (parser->count == 1) {
-        if (parser->command == 0xaf && byte != 0x60) {
-            ++state.status.errors;
-            begin_frame(byte, now);
-            return;
-        }
-        parser->value = byte;
-        parser->sum   = (uint8_t)(parser->sum + byte);
-        ++parser->count;
-        return;
-    }
-    if (parser->command == 0xaf && parser->count == 2) {
-        parser->length  = (uint16_t)byte + 4;
-        parser->discard = byte > 32;
-        if (parser->discard) ++state.status.errors;
-    }
-    if (parser->count + 1 < parser->length) {
-        parser->sum = (uint8_t)(parser->sum + byte);
-        ++parser->count;
-        return;
-    }
-    bool valid = parser->command == 0x61 ? parser->value == 0x0d && byte == 0x0a : parser->sum == byte;
-    if (!valid && !parser->discard) ++state.status.errors;
-    if (valid && !parser->discard) accept_frame(now);
-    parser->count = 0;
+    unsigned events = gmk70_radio_receive(&state.parser, byte, now, NULL, 0, GMK70_RX_RESYNC_RAW | GMK70_RX_STRICT_ACK);
+    if (events & (GMK70_RX_BAD_RAW | GMK70_RX_OVERSIZE | GMK70_RX_CHECKSUM)) ++state.status.errors;
+    if (events & (GMK70_RX_FRAME | GMK70_RX_ACK)) accept_frame(now);
 }
 static bool quarantine_raw_frame(void) {
-    struct battery_parser *parser = &state.parser;
-    if (!parser->count || (parser->command != 0xaf && !parser->discard)) return false;
-    parser->discard = true;
-    if (parser->command == 0xaf && parser->count < 3) {
-        /* Before the raw length arrives, bound its possible remainder by the
-         * largest one-byte length: 255 payload bytes plus four framing bytes.
-         * Keep already consumed bytes in count; command zero skips parsing. */
-        parser->command = 0;
-        parser->length  = 259;
-    }
-    return true;
+    return gmk70_radio_quarantine(&state.parser);
 }
 __attribute__((noinline)) static void drain_rx(uint32_t now) {
     if (state.parser.count && !state.parser.discard && (uint32_t)(now - state.parser.last_byte_ms) >= BATTERY_TIMEOUT_MS) {

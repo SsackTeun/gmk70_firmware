@@ -5,6 +5,7 @@
 #include "quantum.h"
 #include <stdbool.h>
 #include "wireless.h"
+#include "../../../../core/policy.h"
 
 // Stock V13 reads C15 low for Bluetooth and C14 low for 2.4 GHz.
 // Binary evidence and the complete truth table: docs/STOCK-MODE-SWITCH.md.
@@ -16,8 +17,8 @@
 
 #define HS_GET_MODE_PIN_(pin_bt, pin_2g4) ((((#pin_bt)[0] == 'x') || ((gpio_read_pin(HS_BT_DEF_PIN) + 0x30) == ((#pin_bt)[0]))) && (((#pin_2g4)[0] == 'x') || ((gpio_read_pin(HS_2G4_DEF_PIN) + 0x30) == ((#pin_2g4)[0]))))
 #define HS_GET_MODE_PIN(state) HS_GET_MODE_PIN_(state)
-#define HS_MODEIO_DETECTION_TIME 50
-#define HS_LBACK_TIMEOUT (30 * 1000)
+#define HS_MODEIO_DETECTION_TIME GMK70_SWITCH_DEBOUNCE_MS
+#define HS_LBACK_TIMEOUT GMK70_DISCONNECTED_SLEEP_MS
 
 enum modeio_mode { hs_none = 0, hs_usb, hs_bt, hs_2g4, hs_wireless, hs_invalid };
 

@@ -1,3 +1,4 @@
+#include "../../qmk-common/core/hold.h"
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #define DT_DRV_COMPAT zuoya_gmk70_behavior_recovery
 #include "recovery.h"
@@ -23,10 +24,10 @@ static void reset_settings(struct k_work *work) {
     bool             run = held.action == GMK_RECOVERY_SETTINGS_RESET;
     if (run) {
         uint32_t elapsed = k_uptime_get_32() - held.since_ms;
-        if (elapsed < 3000U) {
+        if (elapsed < GMK70_HOLD_MS) {
             /* A previous hold's callback can already be queued when another
              * press reschedules this timer. Never consume the newer hold early. */
-            (void)k_work_reschedule(&settings_hold, K_MSEC(3000U - elapsed));
+            (void)k_work_reschedule(&settings_hold, K_MSEC(GMK70_HOLD_MS - elapsed));
             run = false;
         } else
             held.action = GMK_RECOVERY_NONE;
@@ -56,7 +57,7 @@ int gmk_recovery_hold_press(enum gmk_recovery_action action, struct zmk_behavior
     held.position = event.position;
     held.source   = source(event);
     held.action   = (uint8_t)action;
-    if (action == GMK_RECOVERY_SETTINGS_RESET) (void)k_work_reschedule(&settings_hold, K_MSEC(3000));
+    if (action == GMK_RECOVERY_SETTINGS_RESET) (void)k_work_reschedule(&settings_hold, K_MSEC(GMK70_HOLD_MS));
     k_spin_unlock(&held_lock, key);
     return 0;
 }
@@ -74,7 +75,7 @@ static int release(uint32_t position, uint8_t source_id, int64_t timestamp) {
      * its elapsed-time check also protects a later press of the same key. */
     k_spin_unlock(&held_lock, key);
     if (action == GMK_RECOVERY_SETTINGS_RESET) return 0;
-    if (elapsed < 3000U || elapsed > INT32_MAX) return 0;
+    if (elapsed < GMK70_HOLD_MS || elapsed > INT32_MAX) return 0;
     return gmk_recovery_request(action);
 }
 

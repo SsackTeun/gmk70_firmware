@@ -3,6 +3,7 @@
 
 #include "quantum.h"
 #include "module.h"
+#include "../../core/radio_protocol.h"
 #include "smsg.h"
 #include "uart.h"
 #include "radio_capture.h"
@@ -17,15 +18,15 @@ static MUTEX_DECL(md_uart_mutex);
 #endif
 
 #ifndef MD_BAUD_RATE
-#    define MD_BAUD_RATE 115200
+#    define MD_BAUD_RATE GMK70_RADIO_BAUD
 #endif
 
 #ifndef MD_SNED_PKT_TIMEOUT
-#    define MD_SNED_PKT_TIMEOUT 10
+#    define MD_SNED_PKT_TIMEOUT GMK70_RADIO_TIMEOUT_MS
 #endif
 
 #ifndef MD_SEND_PKT_RETRY
-#    define MD_SEND_PKT_RETRY 50
+#    define MD_SEND_PKT_RETRY GMK70_RADIO_RETRIES
 #endif
 
 #ifndef MD_SEND_PKT_PAYLOAD_MAX
@@ -64,8 +65,7 @@ static MUTEX_DECL(md_uart_mutex);
 #    define MD_RAW_SIZE 32
 #endif
 
-#define MD_RECEIVE_TIMEOUT_MS 10U
-#define MD_BATTERY_FRESH_MS 10000U
+#define MD_BATTERY_FRESH_MS GMK70_BATTERY_FRESH_MS
 
 #define USBCONCAT(a, b) a##b
 #define USBSTR(s) USBCONCAT(L, s)
@@ -81,12 +81,7 @@ typedef struct {
     uint32_t connection_generation;
 } md_info_t;
 
-typedef struct {
-    uint16_t count;
-    uint16_t remaining;
-    uint32_t last_byte_ms;
-    bool     discard;
-} md_receive_t;
+typedef struct gmk70_radio_parser md_receive_t;
 
 static md_receive_t md_receive;
 
@@ -130,23 +125,10 @@ static void md_send_ack(void) {
 }
 
 static bool md_check_sum(const uint8_t *data, uint32_t length) {
-    uint8_t sum = 0;
-
-    for (uint32_t i = 0; i < (length - 1); i++) {
-        sum += data[i];
-    }
-
-    return sum == data[length - 1];
+    return length && gmk70_radio_checksum(data, length - 1) == data[length - 1];
 }
-
 static void md_calc_check_sum(uint8_t *data, uint32_t length) {
-    uint8_t sum = 0;
-
-    for (uint32_t i = 0; i < length; i++) {
-        sum += data[i];
-    }
-
-    data[length] = sum;
+    data[length] = gmk70_radio_checksum(data, length);
 }
 
 bool md_receive_process_user(uint8_t *pdata, uint8_t len) __attribute__((weak));
@@ -166,16 +148,7 @@ void md_receive_host_cb(bool resume) __attribute__((weak));
 void md_receive_host_cb(bool resume) {}
 
 static void md_quarantine_or_reset(void) {
-    if (md_receive.count && (md_rev_payload[0] == MD_REV_CMD_RAW || md_receive.discard)) {
-        if (!md_receive.discard && md_receive.count < 3) {
-            // The length has not arrived: bound the whole frame at 255 + 4.
-            md_receive.remaining = 259U - md_receive.count;
-        }
-        // Retain this finite byte budget even across empty timeout polls.
-        md_receive.discard = true;
-    } else {
-        md_receive = (md_receive_t){0};
-    }
+    gmk70_radio_fault(&md_receive);
 }
 
 static bool md_uart_fault(void) {
@@ -187,15 +160,11 @@ static bool md_uart_fault(void) {
 }
 
 static void md_receive_msg_task(void) {
-    if (md_receive.count && !md_receive.discard && sync_timer_elapsed32(md_receive.last_byte_ms) >= MD_RECEIVE_TIMEOUT_MS) {
-        md_quarantine_or_reset();
-    }
-
+    (void)gmk70_radio_expire(&md_receive, sync_timer_read32());
     for (;;) {
         if (md_uart_fault()) {
             md_quarantine_or_reset();
-            // Bytes lost to a line fault are unknown. Drop buffered damage
-            // without reducing a raw quarantine's remaining byte budget.
+            // Lost bytes have unknown length; retain the finite raw-tail budget.
             while (uart_available()) {
                 (void)uart_read();
                 gmk_radio_diag_count(GMK_RADIO_RX_BYTES, selected_device);
@@ -203,80 +172,20 @@ static void md_receive_msg_task(void) {
             return;
         }
         if (!uart_available()) return;
-
         uint8_t data = uart_read();
         gmk_radio_diag_count(GMK_RADIO_RX_BYTES, selected_device);
-        md_receive.last_byte_ms = sync_timer_read32();
-
-        if (md_receive.discard) {
-            if (--md_receive.remaining == 0) md_receive = (md_receive_t){0};
-            continue;
+        unsigned events = gmk70_radio_receive(&md_receive, data, sync_timer_read32(), md_rev_payload, sizeof(md_rev_payload), 0);
+        if (events & GMK70_RX_UNKNOWN) gmk_radio_diag_count(GMK_RADIO_UNKNOWN_BYTES, selected_device);
+        if (events & GMK70_RX_RAW_HEADER) gmk_radio_diag_header(data, selected_device);
+        if (events & GMK70_RX_OVERSIZE) gmk_radio_diag_count(GMK_RADIO_RAW_OVERSIZE, selected_device);
+        if (events & GMK70_RX_CHECKSUM) gmk_radio_diag_count(GMK_RADIO_CHECKSUM_ERRORS, selected_device);
+        if (events & GMK70_RX_ACK) {
+            gmk_radio_diag_count(GMK_RADIO_ACKS, selected_device);
+            if (smsg_get_state() == smsg_state_busy) smsg_set_state(smsg_state_replied);
+            return;
         }
-
-        switch (md_receive.count) {
-            case 0: { // cmd
-                switch (data) {
-                    case MD_REV_CMD_RAW:
-                    case MD_REV_CMD_INDICATOR:
-                    case MD_REV_CMD_DEVCTRL:
-                    case MD_REV_CMD_BATVOL:
-                    case MD_REV_CMD_MD_FW_VERSION:
-                    case MD_REV_CMD_HOST_STATE:
-                    case 0x61: {
-                        md_rev_payload[md_receive.count++] = data;
-                        md_receive.remaining               = 2;
-                    } break;
-                    default: {
-                        gmk_radio_diag_count(GMK_RADIO_UNKNOWN_BYTES, selected_device);
-                        md_receive.count = 0;
-                    } break;
-                }
-                continue;
-            } break;
-            case 1: {
-                if (md_rev_payload[0] == MD_REV_CMD_RAW && data != MD_REV_CMD_RAW_OUT) {
-                    md_receive = (md_receive_t){0};
-                    continue;
-                }
-                md_rev_payload[md_receive.count++] = data;
-                md_receive.remaining--;
-                continue;
-            } break;
-            case 2: {
-                // ACK
-                if ((md_rev_payload[0] == 0x61) && (md_rev_payload[1] == 0x0D) && (data == 0x0A)) {
-                    gmk_radio_diag_count(GMK_RADIO_ACKS, selected_device);
-                    if (smsg_get_state() == smsg_state_busy) {
-                        smsg_set_state(smsg_state_replied);
-                    }
-                    md_receive = (md_receive_t){0};
-                    return;
-                }
-
-                // raw data
-                if ((md_rev_payload[0] == MD_REV_CMD_RAW) && (md_rev_payload[1] == MD_REV_CMD_RAW_OUT)) {
-                    gmk_radio_diag_header(data, selected_device);
-                    if (data > MD_RAW_SIZE) {
-                        gmk_radio_diag_count(GMK_RADIO_RAW_OVERSIZE, selected_device);
-                        md_receive.discard = true;
-                    }
-                    md_rev_payload[md_receive.count++] = data;
-                    md_receive.remaining               = (uint16_t)data + 1;
-                    continue;
-                }
-            }
-                __attribute__((fallthrough));
-            default: {
-                md_rev_payload[md_receive.count++] = data;
-                md_receive.remaining--;
-
-                if (md_receive.remaining) {
-                    continue;
-                }
-            } break;
-        }
-
-        uint8_t length = md_receive.count;
+        if (!(events & GMK70_RX_FRAME)) continue;
+        uint8_t length = (uint8_t)md_receive.length;
         md_receive     = (md_receive_t){0};
         if (md_check_sum(md_rev_payload, length)) {
             gmk_radio_diag_count(GMK_RADIO_VALID_FRAMES, selected_device);
@@ -309,22 +218,8 @@ static void md_receive_msg_task(void) {
                 case MD_REV_CMD_DEVCTRL: {
                     // V15 accepts status only for a dispatched channel command.
                     if (!status_context || status_context != selected_device) break;
-                    switch (md_rev_payload[1]) {
-                        case MD_REV_CMD_DEVCTRL_PAIRING: {
-                            md_set_connection_state(MD_STATE_PAIRING, true);
-                        } break;
-                        case MD_REV_CMD_DEVCTRL_CONNECTED: {
-                            md_set_connection_state(MD_STATE_CONNECTED, false);
-                        } break;
-                        case MD_REV_CMD_DEVCTRL_DISCONNECTED: {
-                            md_set_connection_state(MD_STATE_DISCONNECTED, false);
-                        } break;
-                        case MD_REV_CMD_DEVCTRL_REJECT: {
-                            md_set_connection_state(MD_STATE_REJECT, false);
-                        } break;
-                        default:
-                            break;
-                    }
+                    uint8_t connection = gmk70_radio_connection(md_rev_payload[1]);
+                    if (connection != UINT8_MAX) md_set_connection_state(connection, connection == MD_STATE_PAIRING);
                 } break;
                 case MD_REV_CMD_BATVOL: {
                     if (md_rev_payload[1] <= 100) {
@@ -350,44 +245,26 @@ static void md_receive_msg_task(void) {
 }
 
 static void md_send_pkt_task(void) {
-    switch (smsg_get_state()) {
-        case smsg_state_busy: {
-            if (sync_timer_elapsed32(smsg_timer) > (MD_SNED_PKT_TIMEOUT)) {
-                smsg_set_state(smsg_state_retry);
-            }
-        } break;
-        case smsg_state_retry: {
-            if (++smsg_retry > smsg_limit) {
-                smsg_retry = 0;
-                smsg_pop();
-            }
-            smsg_set_state(smsg_state_free);
-        } break;
-        case smsg_state_replied: {
-            smsg_retry = 0;
-            smsg_pop();
-            smsg_set_state(smsg_state_free);
-        }
-            __attribute__((fallthrough));
-        case smsg_state_free: {
-            uint32_t size = smsg_peek(md_pkt_payload);
-            if (size) {
-                if (!smsg_retry) {
-                    smsg_limit = MD_SEND_PKT_RETRY;
-                    if (md_pkt_payload[0] == MD_SND_CMD_DEVCTRL) {
-                        const uint8_t command = md_pkt_payload[1];
-                        if ((command >= MD_SND_CMD_DEVCTRL_2G4 && command <= MD_SND_CMD_DEVCTRL_BT5) || command == MD_SND_CMD_DEVCTRL_PAIR || command == MD_SND_CMD_DEVCTRL_CLEAN) status_context = selected_device;
-                        if (command == MD_SND_CMD_DEVCTRL_PAIR) md_info.inhibit_reports = true;
-                        if (command == MD_SND_CMD_DEVCTRL_INQVOL) smsg_limit = 1;
-                    }
+    struct gmk70_command_step step = gmk70_command_poll((enum gmk70_command_phase)smsg_get_state(), smsg_retry, smsg_limit, sync_timer_read32(), smsg_timer, MD_SNED_PKT_TIMEOUT, true, true);
+    smsg_retry                     = step.retries;
+    smsg_set_state((smsg_states_t)step.phase);
+    if (step.retire) smsg_pop();
+    if (step.send) {
+        uint32_t size = smsg_peek(md_pkt_payload);
+        if (size) {
+            if (!smsg_retry) {
+                smsg_limit = MD_SEND_PKT_RETRY;
+                if (md_pkt_payload[0] == MD_SND_CMD_DEVCTRL) {
+                    const uint8_t command = md_pkt_payload[1];
+                    if ((command >= MD_SND_CMD_DEVCTRL_2G4 && command <= MD_SND_CMD_DEVCTRL_BT5) || command == MD_SND_CMD_DEVCTRL_PAIR || command == MD_SND_CMD_DEVCTRL_CLEAN) status_context = selected_device;
+                    if (command == MD_SND_CMD_DEVCTRL_PAIR) md_info.inhibit_reports = true;
+                    if (command == MD_SND_CMD_DEVCTRL_INQVOL) smsg_limit = 1;
                 }
-                md_send_pkt(md_pkt_payload, size);
-                smsg_timer = sync_timer_read32();
-                smsg_set_state(smsg_state_busy);
             }
-        } break;
-        default:
-            break;
+            md_send_pkt(md_pkt_payload, size);
+            smsg_timer = sync_timer_read32();
+            smsg_set_state(smsg_state_busy);
+        }
     }
 }
 
@@ -529,54 +406,42 @@ void md_send_pkt(uint8_t *data, uint32_t len) {
 void md_send_kb(uint8_t *data) {
     uint8_t sdata[MD_SND_CMD_KB_LEN + 2] = {0x00};
 
-    sdata[0] = MD_SND_CMD_SEND_KB;
-    memcpy(&sdata[1], data, sizeof(sdata) - 2);
-    md_calc_check_sum(sdata, sizeof(sdata) - 1);
+    gmk70_radio_report(sdata, MD_SND_CMD_SEND_KB, data, sizeof(sdata) - 2);
     if (!md_reports_inhibited()) md_send_pkt(sdata, sizeof(sdata));
 }
 
 void md_send_nkro(uint8_t *data) {
     uint8_t sdata[MD_SND_CMD_NKRO_LEN + 2] = {0x00};
 
-    sdata[0] = MD_SND_CMD_SEND_NKRO;
-    memcpy(&sdata[1], data, sizeof(sdata) - 2);
-    md_calc_check_sum(sdata, sizeof(sdata) - 1);
+    gmk70_radio_report(sdata, MD_SND_CMD_SEND_NKRO, data, sizeof(sdata) - 2);
     if (!md_reports_inhibited()) md_send_pkt(sdata, sizeof(sdata));
 }
 
 void md_send_consumer(uint8_t *data) {
     uint8_t sdata[MD_SND_CMD_CONSUMER_LEN + 2] = {0x00};
 
-    sdata[0] = MD_SND_CMD_SEND_CONSUMER;
-    memcpy(&sdata[1], data, sizeof(sdata) - 2);
-    md_calc_check_sum(sdata, sizeof(sdata) - 1);
+    gmk70_radio_report(sdata, MD_SND_CMD_SEND_CONSUMER, data, sizeof(sdata) - 2);
     if (!md_reports_inhibited()) md_send_pkt(sdata, sizeof(sdata));
 }
 
 void md_send_system(uint8_t *data) {
     uint8_t sdata[MD_SND_CMD_SYSTEM_LEN + 2] = {0x00};
 
-    sdata[0] = MD_SND_CMD_SEND_SYSTEM;
-    memcpy(&sdata[1], data, sizeof(sdata) - 2);
-    md_calc_check_sum(sdata, sizeof(sdata) - 1);
+    gmk70_radio_report(sdata, MD_SND_CMD_SEND_SYSTEM, data, sizeof(sdata) - 2);
     if (!md_reports_inhibited()) md_send_pkt(sdata, sizeof(sdata));
 }
 
 void md_send_fn(uint8_t *data) {
     uint8_t sdata[MD_SND_CMD_FN_LEN + 2] = {0x00};
 
-    sdata[0] = MD_SND_CMD_SEND_FN;
-    memcpy(&sdata[1], data, sizeof(sdata) - 2);
-    md_calc_check_sum(sdata, sizeof(sdata) - 1);
+    gmk70_radio_report(sdata, MD_SND_CMD_SEND_FN, data, sizeof(sdata) - 2);
     if (!md_reports_inhibited()) md_send_pkt(sdata, sizeof(sdata));
 }
 
 void md_send_mouse(uint8_t *data) {
     uint8_t sdata[MD_SND_CMD_MOUSE_LEN + 2] = {0x00};
 
-    sdata[0] = MD_SND_CMD_SEND_MOUSE;
-    memcpy(&sdata[1], data, sizeof(sdata) - 2);
-    md_calc_check_sum(sdata, sizeof(sdata) - 1);
+    gmk70_radio_report(sdata, MD_SND_CMD_SEND_MOUSE, data, sizeof(sdata) - 2);
     if (!md_reports_inhibited()) md_send_pkt(sdata, sizeof(sdata));
 }
 
@@ -599,9 +464,8 @@ void md_send_devinfo(const char *name) {
 void md_send_devctrl(uint8_t cmd) {
     uint8_t sdata[3] = {0x00};
 
-    sdata[0] = MD_SND_CMD_DEVCTRL;
-    memcpy(&sdata[1], &cmd, sizeof(sdata) - 2);
-    md_calc_check_sum(sdata, sizeof(sdata) - 1);
+    gmk70_radio_control(sdata, cmd);
+
     smsg_push(sdata, sizeof(sdata));
 }
 
@@ -664,68 +528,26 @@ void md_send_raw(uint8_t *data, uint8_t length) {
 void md_devs_change(uint8_t devs, bool reset) __attribute__((weak));
 void md_devs_change(uint8_t devs, bool reset) {
     selected_device = devs;
-    switch (devs) {
-        case DEVS_USB: {
-            md_send_devctrl(MD_SND_CMD_DEVCTRL_USB);
-        } break;
-        case DEVS_2G4: {
-            md_send_devctrl(MD_SND_CMD_DEVCTRL_2G4);
-            if (reset) {
-                if (md_get_version() < 48) {
-                    md_send_manufacturer(MD_DONGLE_MANUFACTURER, strlen(MD_DONGLE_MANUFACTURER));
-                    md_send_product(MD_DONGLE_PRODUCT, strlen(MD_DONGLE_PRODUCT));
-                } else { // Add Unicode character support starting from v48.
-                    md_send_manufacturer((char *)USBSTR(MD_DONGLE_MANUFACTURER), sizeof(USBSTR(MD_DONGLE_MANUFACTURER)));
-                    md_send_product((char *)USBSTR(MD_DONGLE_PRODUCT), sizeof(USBSTR(MD_DONGLE_PRODUCT)));
-                }
-                md_send_vpid(VENDOR_ID, PRODUCT_ID);
-                md_send_devctrl(MD_SND_CMD_DEVCTRL_CLEAN);
-                md_send_devctrl(MD_SND_CMD_DEVCTRL_PAIR);
-            }
-        } break;
-        case DEVS_BT1: {
-            md_send_devctrl(MD_SND_CMD_DEVCTRL_BT1);
-            if (reset) {
-                md_send_devctrl(MD_SND_CMD_DEVCTRL_CLEAN);
-                md_send_devinfo(MD_BT1_NAME);
-                md_send_devctrl(MD_SND_CMD_DEVCTRL_PAIR);
-            }
-        } break;
-        case DEVS_BT2: {
-            md_send_devctrl(MD_SND_CMD_DEVCTRL_BT2);
-            if (reset) {
-                md_send_devctrl(MD_SND_CMD_DEVCTRL_CLEAN);
-                md_send_devinfo(MD_BT2_NAME);
-                md_send_devctrl(MD_SND_CMD_DEVCTRL_PAIR);
-            }
-        } break;
-        case DEVS_BT3: {
-            md_send_devctrl(MD_SND_CMD_DEVCTRL_BT3);
-            if (reset) {
-                md_send_devctrl(MD_SND_CMD_DEVCTRL_CLEAN);
-                md_send_devinfo(MD_BT3_NAME);
-                md_send_devctrl(MD_SND_CMD_DEVCTRL_PAIR);
-            }
-        } break;
-        case DEVS_BT4: {
-            md_send_devctrl(MD_SND_CMD_DEVCTRL_BT4);
-            if (reset) {
-                md_send_devctrl(MD_SND_CMD_DEVCTRL_CLEAN);
-                md_send_devinfo(MD_BT4_NAME);
-                md_send_devctrl(MD_SND_CMD_DEVCTRL_PAIR);
-            }
-        } break;
-        case DEVS_BT5: {
-            md_send_devctrl(MD_SND_CMD_DEVCTRL_BT5);
-            if (reset) {
-                md_send_devctrl(MD_SND_CMD_DEVCTRL_CLEAN);
-                md_send_devinfo(MD_BT5_NAME);
-                md_send_devctrl(MD_SND_CMD_DEVCTRL_PAIR);
-            }
-        } break;
-        default:
-            break;
+    if (devs > DEVS_2G4) return;
+    md_send_devctrl(gmk70_host_command(devs));
+    if (!reset || devs == DEVS_USB) return;
+    if (devs == DEVS_2G4) {
+        // Native identity encoding differs before/after stock radio v48.
+        if (md_get_version() < 48) {
+            md_send_manufacturer(MD_DONGLE_MANUFACTURER, strlen(MD_DONGLE_MANUFACTURER));
+            md_send_product(MD_DONGLE_PRODUCT, strlen(MD_DONGLE_PRODUCT));
+        } else {
+            md_send_manufacturer((char *)USBSTR(MD_DONGLE_MANUFACTURER), sizeof(USBSTR(MD_DONGLE_MANUFACTURER)));
+            md_send_product((char *)USBSTR(MD_DONGLE_PRODUCT), sizeof(USBSTR(MD_DONGLE_PRODUCT)));
+        }
+        md_send_vpid(VENDOR_ID, PRODUCT_ID);
+        md_send_devctrl(MD_SND_CMD_DEVCTRL_CLEAN);
+    } else {
+        static const char *const names[] = {MD_BT1_NAME, MD_BT2_NAME, MD_BT3_NAME, MD_BT4_NAME, MD_BT5_NAME};
+        md_send_devctrl(MD_SND_CMD_DEVCTRL_CLEAN);
+        md_send_devinfo(names[devs - DEVS_BT1]);
     }
+    md_send_devctrl(MD_SND_CMD_DEVCTRL_PAIR);
 }
 
 bool md_inquire_bat(void) {

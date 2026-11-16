@@ -1,6 +1,7 @@
 // Copyright 2024 yangzheng20003 (@yangzheng20003)
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "stock_battery.h"
+#include "../../../core/indicators.h"
 #include "stock_keycodes.h"
 #include "transactions.h"
 #include "rgb_matrix.h"
@@ -84,7 +85,7 @@ void stock_battery_sample(uint8_t percentage, uint32_t now) {
 }
 
 uint8_t stock_battery_sample_read(uint32_t now) {
-    return sample_valid && (uint32_t)(now - sample_at) <= 10000 ? sample_percentage : UINT8_MAX;
+    return gmk70_battery_fresh(sample_valid, sample_percentage, now - sample_at) ? sample_percentage : UINT8_MAX;
 }
 
 bool stock_battery_receive(uint8_t command, uint8_t *response) {
@@ -123,21 +124,13 @@ void stock_battery_render(uint8_t percentage) {
     rgb_matrix_set_color_all(0, 0, 0);
     static const uint8_t indices[10] = RGB_MATRIX_BAT_INDEX_MAP;
     for (uint8_t i = 0; i < 10; ++i) {
-        if (percentage > 100) {
-            rgb_matrix_set_color(indices[i], 24, 0, 24);
-        } else if (i < percentage / 10 || i == 0) {
-            if (percentage >= 30) {
-                rgb_matrix_set_color(indices[i], 0, 150, 0);
-            } else {
-                rgb_matrix_set_color(indices[i], 150, 0, 0);
-            }
-        } else {
-            rgb_matrix_set_color(indices[i], 0, 0, 0);
-        }
+        struct gmk70_color color = gmk70_battery_segment(percentage, true, i, 150);
+        rgb_matrix_set_color(indices[i], color.r, color.g, color.b);
     }
 }
 
 void stock_battery_render_charging(bool cable_connected, bool fully_charged) {
     if (!stock_battery_charging_requested() || !cable_connected) return;
-    rgb_matrix_set_color(HS_MATRIX_BLINK_INDEX_BAT, fully_charged ? 0 : 80, fully_charged ? 80 : 0, 0);
+    struct gmk70_color color = gmk70_charging_color(fully_charged);
+    rgb_matrix_set_color(HS_MATRIX_BLINK_INDEX_BAT, color.r, color.g, color.b);
 }
