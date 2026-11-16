@@ -43,9 +43,9 @@ void __wrap_via_init(void) {
 #ifdef GMK70_VIAL_UPDATE
 #    include "vial.h"
 #    include "update/qmk_update.h"
-#    include "update/protocol.h"
+#    include "../../common/update/protocol.h"
 #    ifdef GMK70_VIAL_TRIAL
-#        include "update/trial.h"
+#        include "../../common/update/trial.h"
 #    endif
 
 bool gmk_update_usb_authorized(uint8_t operation) {
