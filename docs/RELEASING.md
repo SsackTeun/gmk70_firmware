@@ -1,8 +1,8 @@
 # Firmware releases
 
 Push to the corresponding release branch to run checks, build firmware and
-publish the next patch version. Firmware checks and builds run only on these
-branches. No manual tag or Actions trigger is needed.
+publish the next patch version. Pushing `main`, tags or other branches does not
+run the workflow. No manual tag or Actions trigger is needed.
 
 | Branch | Packages | Tags |
 | --- | --- | --- |
