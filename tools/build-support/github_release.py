@@ -159,10 +159,14 @@ def write_release_redirects(
         page.write_text(
             "<!doctype html>\n"
             '<html lang="en">\n'
+            "<head>\n"
             '<meta charset="utf-8">\n'
+            f"<script>window.location.replace({json.dumps(target)});</script>\n"
             f'<meta http-equiv="refresh" content="0; url={target}">\n'
             f"<title>{title}</title>\n"
-            f'<p><a href="{target}">{title}</a></p>\n',
+            "</head>\n"
+            "<body></body>\n"
+            "</html>\n",
             encoding="utf-8",
         )
 

@@ -246,8 +246,9 @@ class ReleaseTests(unittest.TestCase):
             ("zmk", "zmk-v0.1.5"),
         ):
             target = f"https://github.com/owner/repo/releases/tag/{tag}"
+            self.assertIn(f'window.location.replace("{target}")', pages[family])
             self.assertIn(f'content="0; url={target}"', pages[family])
-            self.assertIn(f'href="{target}"', pages[family])
+            self.assertIn("<body></body>", pages[family])
 
         releases.insert(
             0,
