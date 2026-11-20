@@ -7,8 +7,9 @@ host-switch, pairing, or keyboard settings commands are implemented here.
 #>
 [CmdletBinding()]
 param(
-    [ValidatePattern('^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}$')]
-    [string] $BluetoothAddress = '00:00:00:00:00:00',
+    [Parameter(Mandatory = $true)]
+    [ValidatePattern('^(?!00(?::00){5}$)[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}$')]
+    [string] $BluetoothAddress,
     [string] $OutputDirectory = '',
     [ValidateRange(5, 60)]
     [int] $TimeoutSeconds = 20,

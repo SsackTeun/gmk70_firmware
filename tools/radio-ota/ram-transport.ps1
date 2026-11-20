@@ -30,11 +30,11 @@ function Assert-Gmk70TrialGatt([object] $Result, [string] $Label) {
 }
 
 function Open-Gmk70TrialRadio {
-    param([string] $BluetoothAddress = '00:00:00:00:00:00', [switch] $ReadOnly,
+    param([string] $BluetoothAddress = '', [switch] $ReadOnly,
         [scriptblock] $ReadGuard = $null)
     $script:trialConnectStage = 'host-check'
     if ($PSVersionTable.PSEdition -ne 'Desktop') { throw 'Use Windows PowerShell 5.1.' }
-    if (-not $ReadOnly -and $BluetoothAddress -ne '00:00:00:00:00:00') { throw 'This trial is scoped to the verified GMK70-2 radio.' }
+    if (-not $ReadOnly) { throw 'This archived trial has no public device binding.' }
     $script:trialReadOnly = [bool] $ReadOnly
     $script:trialReadGuard = $ReadGuard
     $script:trialWriteRanges = @()

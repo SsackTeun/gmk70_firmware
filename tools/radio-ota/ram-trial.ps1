@@ -22,7 +22,7 @@ if (Test-Path -LiteralPath $OutputDirectory) { throw 'Refusing to overwrite an e
 [IO.Directory]::CreateDirectory($OutputDirectory) | Out-Null
 $report = [ordered]@{
     mode = $Mode; started_utc = [DateTime]::UtcNow.ToString('o'); status = 'incomplete'
-    bluetooth_address = '00:00:00:00:00:00'; callback_activation_attempted = $false
+    callback_activation_attempted = $false
     stock_application_sha256 = $stockSha; source_sha256 = @{}
 }
 foreach ($name in @('ram-trial.ps1', 'ram-transport.ps1', 'ram-trial-core.ps1', 'radio-core.ps1')) {

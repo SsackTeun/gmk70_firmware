@@ -8,10 +8,11 @@ The scripts here remain separate from that payload's local installation tools.
 5.1 and the existing WinRT collection/buffer adapters. Loading its helper files,
 building the offline bootstrap, and running tests do not connect to a keyboard.
 
-The trial is restricted to GMK70-2 at `00:00:00:00:00:00` and stock application
+The original trial was restricted to one GMK70-2 device and stock application
 SHA-256 `100e2ecdad6d253ea6d177d91579c2e22ea8d5968d3f09d691ed599f7fe7512c`.
 The user supplies that exact captured application as `stock-application.bin`
-beside the Windows scripts. Fixtures and private captures are not committed.
+beside the Windows scripts. The public script retains the trial code as a
+record and rejects write-enabled sessions because the device binding is private.
 
 ## Physical operations
 

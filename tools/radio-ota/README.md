@@ -68,7 +68,8 @@ rights, or firmware update are needed. Windows PowerShell 5.1 is built into Wind
 1. Extract all files together to a writable folder on your Windows PC.
 2. Keep **GMK70-2 connected to Windows in Bluetooth mode** and awake. Close
    Bluetooth LE Explorer and other Bluetooth inspection programs.
-3. Double-click **`run-dump.cmd`**. It selects Windows PowerShell 5.1 explicitly.
+3. Double-click **`run-dump.cmd`** and enter your keyboard's Bluetooth address
+   when prompted. It selects Windows PowerShell 5.1 explicitly.
    Version 2 also relaunches itself in the built-in 5.1 host if started from
    PowerShell 7 on Windows, preserving its arguments and the child's exit code.
 4. Wait for both passes. Keep the keyboard awake if needed; reads may take several
@@ -78,12 +79,11 @@ The ZIP is produced on a handled failure too. Send it even if the script reports
 an error. An interrupted run may leave an output folder and `.partial` file;
 send those if no ZIP was produced.
 
-The default radio address, `00:00:00:00:00:00`, comes from this device's GMK70-2
-Bluetooth screenshot. To use another address or force smaller blocks, open
-Windows PowerShell in this folder and run:
+To pass the address directly or force smaller blocks, open Windows PowerShell in
+this folder and replace `YOUR_DEVICE_ADDRESS` with your keyboard's address:
 
 ```powershell
-.\dump-radio.ps1 -BluetoothAddress '00:00:00:00:00:00' -SmallChunks
+.\dump-radio.ps1 -BluetoothAddress 'YOUR_DEVICE_ADDRESS' -SmallChunks
 ```
 
 The launcher uses a process-only execution policy; it does not change the global
