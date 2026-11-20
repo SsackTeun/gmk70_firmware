@@ -77,6 +77,7 @@ class ReleaseTests(unittest.TestCase):
             "release/zmk",
             "refs/pull/42/merge",
             "refs/tags/via-v1.2.3",
+            "refs/tags/vial-v4.5.6",
             "refs/tags/vial-4.5.6",
             "refs/tags/zmk-v1.2.3",
             "refs/tags/zmk-v1.2.3-trial",
@@ -115,7 +116,7 @@ class ReleaseTests(unittest.TestCase):
             ("vial", "refs/heads/main"),
             ("zmk", "refs/heads/main"),
             ("via", "refs/tags/via-v1.2.3"),
-            ("vial", "refs/tags/vial-1.2.3"),
+            ("vial", "refs/tags/vial-v1.2.3"),
             ("zmk", "refs/tags/zmk-v1.2.3"),
             ("via", "refs/heads/release/vial"),
             ("vial", "refs/heads/release/via"),
@@ -202,21 +203,69 @@ class ReleaseTests(unittest.TestCase):
         tags = [
             ("via-v1.2.9", "old"),
             ("via-v1.2.10", "other"),
-            ("vial-9.9.9", "other"),
+            ("vial-0.1.10", "other"),
+            ("vial-v0.1.9", "other"),
             ("zmk-v0.2.9", "other"),
             ("zmk-v0.2.10", "other"),
             ("via-v01.2.99", "other"),
         ]
         self.assertEqual(self.release.choose_tag("via", tags, "new"), "via-v1.2.11")
-        self.assertEqual(self.release.choose_tag("vial", tags, "new"), "vial-9.9.10")
+        self.assertEqual(self.release.choose_tag("vial", tags, "new"), "vial-v0.1.11")
         self.assertEqual(self.release.choose_tag("via", [], "new"), "via-v0.1.0")
-        self.assertEqual(self.release.choose_tag("vial", [], "new"), "vial-0.1.0")
+        self.assertEqual(self.release.choose_tag("vial", [], "new"), "vial-v0.1.0")
         self.assertEqual(self.release.choose_tag("zmk", tags, "new"), "zmk-v0.2.11")
         self.assertEqual(self.release.choose_tag("zmk", [], "new"), "zmk-v0.1.0")
 
     def test_retry_reuses_tag_for_the_same_family_and_commit(self) -> None:
         tags = [("via-v0.1.0", "same"), ("vial-0.1.9", "same"), ("via-v0.1.3", "newer")]
         self.assertEqual(self.release.choose_tag("via", tags, "same"), "via-v0.1.0")
+        self.assertEqual(self.release.choose_tag("vial", tags, "same"), "vial-0.1.9")
+
+    def test_redirects_advance_only_the_family_that_published(self) -> None:
+        releases = [
+            {"tag_name": tag, "published_at": date, "draft": draft, "prerelease": pre}
+            for tag, date, draft, pre in (
+                ("via-v0.1.8", "2026-10-01T01:00:00Z", False, False),
+                ("vial-0.1.10", "2026-10-01T02:00:00Z", False, False),
+                ("zmk-v0.1.5", "2026-10-01T03:00:00Z", False, False),
+                ("vial-0.1.9", "2026-09-30T02:00:00Z", False, False),
+                ("via-v0.1.9", "2026-10-02T01:00:00Z", True, False),
+                ("zmk-v0.1.6", "2026-10-02T01:00:00Z", False, True),
+                ("other-v1.0.0", "2026-10-03T01:00:00Z", False, False),
+            )
+        ]
+        self.release.write_release_redirects("owner/repo", releases, self.root)
+        pages = {
+            family: (self.root / family / "index.html").read_text()
+            for family in ("via", "vial", "zmk")
+        }
+        self.assertEqual({path.name for path in self.root.iterdir()}, pages.keys())
+        for family, tag in (
+            ("via", "via-v0.1.8"),
+            ("vial", "vial-0.1.10"),
+            ("zmk", "zmk-v0.1.5"),
+        ):
+            target = f"https://github.com/owner/repo/releases/tag/{tag}"
+            self.assertIn(f'content="0; url={target}"', pages[family])
+            self.assertIn(f'href="{target}"', pages[family])
+
+        releases.insert(
+            0,
+            {
+                "tag_name": "vial-v0.1.11",
+                "published_at": "2026-10-04T01:00:00Z",
+                "draft": False,
+                "prerelease": False,
+            },
+        )
+        self.release.write_release_redirects("owner/repo", releases, self.root)
+        for family in ("via", "zmk"):
+            self.assertEqual(
+                (self.root / family / "index.html").read_text(), pages[family]
+            )
+        self.assertIn(
+            "/releases/tag/vial-v0.1.11", (self.root / "vial/index.html").read_text()
+        )
 
     def assets(self, family: str) -> Path:
         output = self.root / family
@@ -347,7 +396,7 @@ class ReleaseTests(unittest.TestCase):
     def test_successful_publication_tags_the_built_commit_for_each_family(self) -> None:
         for family, expected_tag in (
             ("via", "via-v0.1.0"),
-            ("vial", "vial-0.1.0"),
+            ("vial", "vial-v0.1.0"),
             ("zmk", "zmk-v0.1.0"),
         ):
             with self.subTest(family=family):

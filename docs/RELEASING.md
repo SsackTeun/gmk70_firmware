@@ -7,7 +7,7 @@ run the workflow. No manual tag or Actions trigger is needed.
 | Branch | Packages | Tags |
 | --- | --- | --- |
 | `release/via` | VIA release firmware, normal and updater | `via-vX.X.X` |
-| `release/vial` | Vial normal, updater and unlocked updater | `vial-X.X.X` |
+| `release/vial` | Vial normal, updater and unlocked updater | `vial-vX.X.X` |
 | `release/zmk` | ZMK Studio updater and standalone | `zmk-vX.X.X` |
 
 Promote `main`, for example:
@@ -18,6 +18,18 @@ git switch release/zmk
 git merge --ff-only origin/main
 git push origin release/zmk
 ```
+
+The older `vial-X.X.X` tags still count toward Vial's version sequence.
+
+After publishing a release, the workflow deploys three GitHub Pages paths.
+Append `/via/`, `/vial/`, or `/zmk/` to the site URL shown in this repository's
+Pages settings. Each path opens the most recently published stable release
+for its firmware family.
+
+For initial setup, select **GitHub Actions** as the source in
+[Settings → Pages](../../../settings/pages). If the `github-pages` environment
+restricts deployments, allow the three release branches. The next successful
+release deploys all three links.
 
 Downloads contain only firmware and checksums:
 

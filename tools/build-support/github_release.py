@@ -16,7 +16,7 @@ FAMILIES = {
     "vial": ("vial", "vial-updater", "vial-unlocked-updater"),
     "zmk": ("zmk", "zmk-standalone"),
 }
-PREFIXES = {"via": "via-v", "vial": "vial-", "zmk": "zmk-v"}
+PREFIXES = {"via": "via-v", "vial": "vial-v", "zmk": "zmk-v"}
 TITLES = {"via": "VIA", "vial": "Vial", "zmk": "ZMK"}
 VERSION = r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
 
@@ -40,11 +40,16 @@ class GitHubRecord(TypedDict, total=False):
     commit: GitHubCommit
     tag_name: str
     draft: bool
+    prerelease: bool
+    published_at: str | None
     assets: list[GitHubAsset]
 
 
 def tag_version(family: str, tag: str) -> tuple[int, int, int] | None:
-    match = re.fullmatch(re.escape(PREFIXES[family]) + VERSION, tag)
+    prefix = PREFIXES[family]
+    if family == "vial" and not tag.startswith(prefix):
+        prefix = "vial-"  # Existing releases still count for versioning and retries.
+    match = re.fullmatch(re.escape(prefix) + VERSION, tag)
     if match is None:
         return None
     return int(match[1]), int(match[2]), int(match[3])
@@ -119,6 +124,47 @@ def github_pages(endpoint: str) -> list[GitHubRecord]:
     )
     pages = cast(list[list[GitHubRecord]], json.loads(output))
     return [item for page in pages for item in page]
+
+
+def write_release_redirects(
+    repository: str, releases: list[GitHubRecord], output: Path
+) -> None:
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
+        raise ValueError("Invalid GitHub repository")
+
+    latest: dict[str, tuple[str, tuple[int, int, int], str]] = {}
+    for release in releases:
+        published = release.get("published_at")
+        if not published or release["draft"] or release["prerelease"]:
+            continue
+        tag = release["tag_name"]
+        for family in FAMILIES:
+            if (version := tag_version(family, tag)) is None:
+                continue
+            candidate = (published, version, tag)
+            if family not in latest or candidate > latest[family]:
+                latest[family] = candidate
+
+    missing = FAMILIES.keys() - latest.keys()
+    if missing:
+        raise ValueError(
+            f"Missing published releases for: {', '.join(sorted(missing))}"
+        )
+
+    for family, (_, _, tag) in latest.items():
+        target = f"https://github.com/{repository}/releases/tag/{tag}"
+        page = output / family / "index.html"
+        page.parent.mkdir(parents=True, exist_ok=True)
+        title = f"Latest GMK70 {TITLES[family]} release"
+        page.write_text(
+            "<!doctype html>\n"
+            '<html lang="en">\n'
+            '<meta charset="utf-8">\n'
+            f'<meta http-equiv="refresh" content="0; url={target}">\n'
+            f"<title>{title}</title>\n"
+            f'<p><a href="{target}">{title}</a></p>\n',
+            encoding="utf-8",
+        )
 
 
 def write_diff_notes(
@@ -251,6 +297,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("plan")
+    pages = commands.add_parser("pages")
+    pages.add_argument("--output", type=Path, required=True)
     release = commands.add_parser("publish")
     release.add_argument("--family", choices=tuple(FAMILIES), required=True)
     args = parser.parse_args()
@@ -268,6 +316,10 @@ def main() -> None:
                 requests.read_text()
             )
             print(f"repackage={str(repackage).lower()}")
+        elif args.command == "pages":
+            repository = os.environ["GITHUB_REPOSITORY"]
+            releases = github_pages(f"repos/{repository}/releases?per_page=100")
+            write_release_redirects(repository, releases, args.output)
         else:
             if os.environ["GITHUB_EVENT_NAME"] != "push":
                 raise ValueError("Only push events publish releases")
