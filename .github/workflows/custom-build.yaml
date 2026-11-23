@@ -1,5 +1,7 @@
 name: Custom build
 on:
+  push:
+    branches: [auto-rbrc]
   workflow_dispatch:
 
 permissions:
