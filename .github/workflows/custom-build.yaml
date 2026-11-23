@@ -1,0 +1,40 @@
+name: Custom build
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.variant }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [via-release, via-release-updater]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: System prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl xz-utils
+      - name: Initialize pinned sources and tools
+        run: make setup
+      - name: Build and verify package
+        env:
+          FIRMWARE_VARIANT: ${{ matrix.variant }}
+          JOBS: "2"
+        run: bash scripts/github-build.sh "$FIRMWARE_VARIANT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gmk70-firmware-${{ matrix.variant }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30

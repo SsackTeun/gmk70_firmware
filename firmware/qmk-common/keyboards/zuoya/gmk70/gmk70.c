@@ -734,7 +734,30 @@ static bool process_gmk70_record(uint16_t keycode, keyrecord_t *record) {
 
 // Saved maps from pre-0.28 QMK used underglow codes for matrix lighting.
 // Pass their translated value through both the board hooks and upstream handler.
+// ] 자동 반복 토글: 한 번 누르면 계속 입력, 다시 누르면 중지
+#define AUTO_RBRC_INTERVAL_MS 50
+static deferred_token auto_rbrc_token = INVALID_DEFERRED_TOKEN;
+
+static uint32_t auto_rbrc_cb(uint32_t trigger_time, void *cb_arg) {
+    tap_code(KC_RBRC);
+    return AUTO_RBRC_INTERVAL_MS;
+}
+
+static void auto_rbrc_toggle(void) {
+    if (auto_rbrc_token == INVALID_DEFERRED_TOKEN) {
+        tap_code(KC_RBRC);
+        auto_rbrc_token = defer_exec(AUTO_RBRC_INTERVAL_MS, auto_rbrc_cb, NULL);
+    } else {
+        cancel_deferred_exec(auto_rbrc_token);
+        auto_rbrc_token = INVALID_DEFERRED_TOKEN;
+    }
+}
+
 bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
+    if (keycode == AUTO_RBRC) {
+        if (record->event.pressed) auto_rbrc_toggle();
+        return false;
+    }
     // Radio RX may run on its own thread. Consume its transition latch only
     // here or in wireless_task(), before this main-context native action.
     wireless_process_connection_changes();

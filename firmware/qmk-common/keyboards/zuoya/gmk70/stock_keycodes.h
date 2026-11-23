@@ -28,6 +28,8 @@ enum gmk70_stock_keycodes {
     MOR_4                  = 0x7E1F,
     MOR_5                  = 0x7E20,
     MOR_6                  = 0x7E21,
+    // 사용자 추가: ] 자동 반복 토글 (stock 슬롯과 겹치지 않는 번호)
+    AUTO_RBRC              = 0x7E40,
 };
 
 uint8_t  gmk70_wireless_device(uint16_t keycode);
